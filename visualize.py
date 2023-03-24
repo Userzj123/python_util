@@ -1,6 +1,6 @@
 import numpy as np 
 import matplotlib.pyplot as plt
-from generate_field import XYZ
+
 
 def plot_ins_3d(path, dims):
 
@@ -71,18 +71,19 @@ def plot_ins_3d(path, dims):
     return 1
 
 
-def plot_instantaneous(path, domain, dims):
+def plot_instantaneous(path, dims):
     with open(path, 'rb') as f:
         U = np.fromfile(f, dtype=np.float64,)
 
     U = np.reshape(U, dims)
 
     fig, ax = plt.subplots(figsize=(6, 4), dpi=150)
-    ax.contourf(U[64, :, :])
+    ax.contourf(U[20, :, :])
     ax.set_aspect('equal', 'box')
     # ax[1].contourf(U)
     # ax[1].set_aspect('equal', 'box')
-    fig.savefig(r'/Users/user/Documents/Projects/python_util/test.png')
+    fig.savefig(r'/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/test.png')
+    return fig
 
 
 
@@ -91,6 +92,4 @@ def plot_instantaneous(path, domain, dims):
 if __name__ == "__main__":
     dims = [64, 128, 128]
     dims = np.array(dims)*2
-    domain = [2*np.pi, np.pi, 1]
-    
-    plot_instantaneous('/Users/user/Documents/Projects/python_util/inputs/w_velocity.00000000', domain, dims,)
+    plot_instantaneous('/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/tests/2b_channel_flow_scalar_Qi/inputs/theta.00000000', dims,)

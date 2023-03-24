@@ -13,12 +13,13 @@ def write_binary(filename : str, data : np.ndarray, dtype=np.float64):
         # f.write(shape_bytes)
 
         # Write the data to the file in Fortran order
-        data_bytes = np.asfortranarray(data).tobytes()
+        # data_bytes = np.asfortranarray(data).tobytes()
+        data_bytes = np.array(data, dtype=np.float64).tobytes()
         f.write(data_bytes)
     return 1
 
 
-def gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.2]), sigma=[1e-4, 1e-4, 1e-4]):
+def gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.2]), sigma=np.eye(3)*1e-3):
     from scipy.stats import multivariate_normal
 
     Lx, Ly, Lz = domain
@@ -96,7 +97,7 @@ def theta_IC(domain, dims, path, ic_type="dirac_source", source_z=32):
         write_binary(path % 'theta.IC', dirac_source(domain, dims, source_z))
         print('updated theta IC of forward simulation')
     elif ic_type == "gaussian_forward":
-        write_binary(path % 'theta.IC', gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.2])))
+        write_binary(path % 'theta.00000000', gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.2])))
         print('updated theta IC of forward simulation')
     elif ic_type == "gaussian_backward":
         write_binary(path % 'theta.IC', gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.8])))
@@ -158,55 +159,22 @@ def interpolate_velocity_IC(domain, out_dims, out_path, dims, path):
     my_interpolating_function = rgi((z, y, x), U_origin)
     U = my_interpolating_function(np.array([Z.reshape(-1), Y.reshape(-1), X.reshape(-1)]).T)
 
-    U = U.reshape(out_dims[::-1])
-    write_binary(out_path, U)
+    # U = U.reshape(out_dims[::-1])
+    # write_binary(out_path, U)
+    # Previous version
+    U.tofile(out_path)
     print("sucessfully upload interpolated velocity IC")
     return U
-
-
-
-
-# def interpolate_velocity_IC(domain, out_dims, out_path, dims, path):
-#     from scipy.interpolate import interpn
-
-#     if path == None or dims == None: print("Require base data")
-
-#     Lx, Ly, Lz = domain
-#     nx, ny, nz = dims
-
-#     x = np.linspace(0, Lx, nx)
-#     y = np.linspace(0, Ly, ny)
-#     z = np.linspace(0, Lz, nz)
-
-#     nX, nY, nZ = out_dims
-
-#     X = np.linspace(0, Lx, nX)
-#     Y = np.linspace(0, Ly, nY)
-#     Z = np.linspace(0, Lz, nZ)
-
-#     with open(path, 'rb') as f:
-#         U_origin = np.fromfile(f, dtype=np.float64,)
-
-#     U_origin = np.reshape(U_origin, dims[::-1])
-
-
-#     U = interpn((z, y, x), U_origin, np.array([Z, Y, X]).T)
-
-#     U = U.reshape(out_dims[::-1])
-#     write_binary(out_path, U)
-#     print("sucessfully upload interpolated velocity IC")
-#     return U
-
 
 if __name__ == "__main__":
 
     dims = [128, 128, 64]
     domain = [2*np.pi, np.pi, 1]
-    path = '/Users/user/Documents/Projects/python_util/inputs/%s'
+    path = '/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/tests/2_channel_flow_scalar/inputs/%s'
 
     out_dims = [256, 256, 128]
-    out_path = '/Users/user/Documents/Projects/python_util/inputs/%s'
+    out_path = '/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/tests/2b_channel_flow_scalar_Qi/inputs/%s'
 
     
-    velocity_IC(domain, dims=out_dims, path=out_path, ic_type="interpolation", base_path=path, base_dim=dims)
-    # theta_IC(domain, out_dims, out_path, "gaussian_forward", source_z=64)
+    # velocity_IC(domain, dims=out_dims, path=out_path, ic_type="interpolation", base_path=path, base_dim=dims)
+    theta_IC(domain, out_dims, out_path, "gaussian_forward", source_z=64)
