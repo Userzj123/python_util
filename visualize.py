@@ -82,7 +82,6 @@ def plot_instantaneous(path, dims):
     ax.set_aspect('equal', 'box')
     # ax[1].contourf(U)
     # ax[1].set_aspect('equal', 'box')
-    fig.savefig(r'/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/test.png')
     return fig
 
 
