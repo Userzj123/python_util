@@ -7,12 +7,17 @@
 from paraview.simple import *
 import glob
 
-import pdb; pdb.set_trace()
+# Output Directory
+filenames = glob.glob('/Users/user/Downloads/OUTPUT.13201065/ins_velo_*')
+out_path = '/Users/user/Downloads/test/theta.png'
+
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
+
+# import pdb; pdb.set_trace()
 # create a new 'VisItTecplotBinaryReader'
-ins_velo_000000 = VisItTecplotBinaryReader(registrationName='ins_velo_000000*', FileName=['/data/LESGO/OUTPUT.12842652/ins_velo_00000000.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000001.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000002.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000003.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000004.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000005.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000006.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000007.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000008.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000009.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000010.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000011.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000012.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000013.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000014.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000015.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000016.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000017.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000018.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000019.plt', '/data/LESGO/OUTPUT.12842652/ins_velo_00000020.plt'])
+ins_velo_000000 = VisItTecplotBinaryReader(registrationName='ins_velo_000000*', FileName=filenames)
 
 # get animation scene
 animationScene1 = GetAnimationScene()
@@ -115,7 +120,7 @@ renderView1.CameraViewUp = [0.062002041424191974, 0.18698230745939765, 0.9804046
 renderView1.CameraParallelScale = 4.292371598877116
 
 # save animation
-SaveAnimation('/data/LESGO/OUTPUT.12842652/test/test.png', renderView1, ImageResolution=[972, 1153],
+SaveAnimation(out_path, renderView1, ImageResolution=[972, 1153],
     TransparentBackground=1,
     FrameWindow=[0, 20])
 
