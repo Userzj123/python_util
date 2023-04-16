@@ -2,25 +2,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def write_array_to_file(filename, array,):
-    out = []
-    nx, ny, nz = array.shape
-
-    for k in range(nz):
-        for j in range(ny):
-            for i in range(nx):
-                out.append(array[i, j, k])
+    """
+    Write input numpy arrray with dims [nx, ny, nz], which is written and read in row-major order (first index - nz changes fastest), into a binary file.
+    Parameters:
+        filename : String
+        array    : 3d numpy array with shape [nx, ny, nz]
+    Returns:
+        array_column_major : 1d numpy array with shape [nx*ny*nz], written in column-major order(last index - nx changes fastest)
     
-    array_column_major = np.array(out)
-    # Flatten the array in column-major order
-    # array_column_major = np.reshape(array, (array.shape[2], array.shape[1], array.shape[0]), order='F').flatten()
+    """
+    array_column_major = np.reshape(array, (-1), order='F')
 
-    # Write the flattened array to a binary file
     with open(filename, "wb") as f:
         array_column_major.tofile(f)
     return array_column_major
 
 def read_array_from_file(filename, shape, dtype=np.float64):
-    # Read the flattened array from the binary file
+    """
+    Read the flattened array from the binary file
+    Parameters:
+        filename : String
+        shape    : int or tuple of ints [nx, ny, nz]
+    Returns:
+        array    : Numpy array with shape [nx, ny, nz] read from binary file.
+    """
     with open(filename, "rb") as f:
         array_column_major = np.fromfile(f, dtype=dtype)
 
@@ -30,19 +35,38 @@ def read_array_from_file(filename, shape, dtype=np.float64):
 
     return array
 
-def gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.2]), sigma=np.eye(3)*1e-3):
-    from scipy.stats import multivariate_normal
-    X, Y, Z = XYZ(domain, dims)
+def gaussian_ic(domain, dims, mu_L=np.array([0.2, 0.5, 0.5]), sigma=1e-2):
+    """
+    Generate a 3 dimensional numpy array with shape of [nx, ny, nz], which has a normal distribution with mean of mu_L=[x0, y0, z0] and variance of sigma. And the maximum value is set to be 1 in order to keep the magnitude same for differet IC.
+    theta = e^(-((x-x0)^2 + (y-y0)^2 + (z-z0)^2)/(2*sigma^2))
+    
+    Parameters:
+        domain : tuple of ints [Lx, Ly, Lz]
+        dims   : tuple of ints [nx, ny, nz]
+        mu_L   : tuple of ints [x0, y0, z0]
+        sigma  : float, variance of the gaussian distribution
+    Returns:
+        data   : 3d numpy array with shape of [nx, ny, nz]
+    
+    """
+    Lx, Ly, Lz = domain
+    nx, ny, nz = dims
 
-    xyz = np.column_stack([X.flat, Y.flat, Z.flat])
-
-    data = multivariate_normal.pdf(xyz, mean=mu_L*domain, cov=sigma)
-
-    data = data.reshape(X.shape)
+    x = np.linspace(0, Lx, nx)
+    y = np.linspace(0, Ly, ny)
+    z = np.linspace(0, Lz, nz)
+    
+    x0, y0, z0 = mu_L*domain
+    
+    data = np.zeros((nx, ny, nz))
+    for i, xx in enumerate(x):
+        for j, yy in enumerate(y):
+            for k, zz in enumerate(z):
+                data[i, j, k] = np.exp(-( (xx-x0)**2 + (yy-y0)**2 + (zz-z0)**2 )/sigma**2/2)
+    data = data/data.max()
     return data
 
-
-def XYZ(domain, dims):
+def xyz(domain, dims):
     # Define the range and number of points in each direction
     x_range = (0, domain[0])
     y_range = (0, domain[1])
@@ -53,14 +77,20 @@ def XYZ(domain, dims):
     x_coords = np.linspace(x_range[0], x_range[1], n_x)
     y_coords = np.linspace(y_range[0], y_range[1], n_y)
     z_coords = np.linspace(z_range[0], z_range[1], n_z)
+    
+    return x_coords, y_coords, z_coords
+
+
+def XYZ(domain, dims):
+    x_coords, y_coords, z_coords = xyz(domain, dims)
 
     # Use meshgrid to generate a 3D grid of x, y, and z coordinates
     xx, yy, zz = np.meshgrid(x_coords, y_coords, z_coords, indexing='ij')
 
     # Display the shape of the resulting coordinate arrays
     print(f"Shape of xx: {xx.shape}")
-    print(f"Shape of yy: {yy.shape}")
-    print(f"Shape of zz: {zz.shape}")
+    # print(f"Shape of yy: {yy.shape}")
+    # print(f"Shape of zz: {zz.shape}")
 
     return xx, yy, zz
 
@@ -111,10 +141,10 @@ def theta_IC(domain, dims, path, ic_type="dirac_source", source_z=32):
         write_array_to_file(path % 'theta.IC', dirac_source(domain, dims, source_z))
         print('updated theta IC of forward simulation')
     elif ic_type == "gaussian_forward":
-        write_array_to_file(path % 'theta.00000000', gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.2])))
+        write_array_to_file(path % 'theta.IC', gaussian_ic(domain, dims))
         print('updated theta IC of forward simulation')
     elif ic_type == "gaussian_backward":
-        write_array_to_file(path % 'theta.IC', gaussian_ic(domain, dims, mu_L=np.array([0.5, 0.5, 0.8])))
+        write_array_to_file(path % 'theta.IC', gaussian_ic(domain, dims, mu_L=np.array([0.8, 0.5, 0.5])))
         print('updated theta IC of backward simulation')
     if ic_type == "multi_source":
         write_array_to_file(path % 'thetas.IC', multi_theta(domain, dims, 3))
@@ -142,9 +172,9 @@ def velocity_IC(domain, dims, path, ic_type=None, base_path=None, base_dim=None)
         print('updated velocity IC of forward simulation')
 
     if ic_type == "interpolation":
-        interpolate_velocity_IC(domain, dims, path % 'u_velocity.00000000', base_dim, base_path % 'u_velocity.IC' )
-        interpolate_velocity_IC(domain, dims, path % 'v_velocity.00000000', base_dim, base_path % 'v_velocity.IC' )
-        interpolate_velocity_IC(domain, dims, path % 'w_velocity.00000000', base_dim, base_path % 'w_velocity.IC' )
+        interpolate_velocity_IC(domain, dims, path % 'u_velocity.IC', base_dim, base_path % 'u_velocity.IC' )
+        interpolate_velocity_IC(domain, dims, path % 'v_velocity.IC', base_dim, base_path % 'v_velocity.IC' )
+        interpolate_velocity_IC(domain, dims, path % 'w_velocity.IC', base_dim, base_path % 'w_velocity.IC' )
 
         print('updated velocity IC of forward simulation')
 
@@ -164,19 +194,14 @@ def interpolate_velocity_IC(domain, out_dims, out_path, dims, path):
 
     X, Y, Z = XYZ(domain, out_dims)
 
-    with open(path, 'rb') as f:
-        U_origin = np.fromfile(f, dtype=np.float64,)
-
-    U_origin = np.reshape(U_origin, dims[::-1])
+    U_origin = read_array_from_file(path, dims)
 
 
-    my_interpolating_function = rgi((z, y, x), U_origin)
-    U = my_interpolating_function(np.array([Z.reshape(-1), Y.reshape(-1), X.reshape(-1)]).T)
-
-    # U = U.reshape(out_dims[::-1])
-    # write_binary(out_path, U)
-    # Previous version
-    U.tofile(out_path)
+    my_interpolating_function = rgi((x, y, z), U_origin)
+    U = my_interpolating_function(np.array([X.reshape(-1), Y.reshape(-1), Z.reshape(-1)]).T)
+    U = U.reshape(X.shape)
+    
+    write_array_to_file(out_path, U)
     print("sucessfully upload interpolated velocity IC")
     return U
 
@@ -187,7 +212,7 @@ if __name__ == "__main__":
     path = '/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/tests/2_channel_flow_scalar/inputs/%s'
 
     out_dims = [256, 256, 128]
-    out_path = '/Users/user/Documents/Projects/python_util/inputs/%s'
+    out_path = '/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/tests/2b_channel_flow_scalar_Qi/inputs/%s'
 
     
     # velocity_IC(domain, dims=out_dims, path=out_path, ic_type="interpolation", base_path=path, base_dim=dims)

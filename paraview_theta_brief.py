@@ -6,10 +6,11 @@
 #### import the simple module from the paraview
 from paraview.simple import *
 import glob
+import os
 
 # Output Directory
-filenames = glob.glob('/Users/user/Downloads/OUTPUT.13201065/ins_velo_*')
-out_path = '/Users/user/Downloads/test/theta.png'
+filenames = glob.glob('/home/ext-zyou6474/Projects/lesgo_adjoint_tutorial_bundle/tests/4_channel_flow_multi_scalar/OUTPUT.13909476/ins_velo_*')
+out_path = os.path.dirname(filenames[0]) + '/theta.png'
 
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
@@ -26,7 +27,7 @@ animationScene1 = GetAnimationScene()
 animationScene1.UpdateAnimationUsingDataTimeSteps()
 
 # Properties modified on ins_velo_000000
-ins_velo_000000.PointArrayStatus = ['theta', 'u', 'v', 'w', 'x', 'y', 'z']
+ins_velo_000000.PointArrayStatus = ['theta', 'theta2', 'theta3', 'u', 'v', 'w', 'x', 'y', 'z']
 
 # get active view
 renderView1 = GetActiveViewOrCreate('RenderView')
