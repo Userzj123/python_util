@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt
 
-def write_array_to_file(filename, array,):
+def write_array_to_file(filename, array, dtype=np.float64):
     """
     Write input numpy arrray with dims [nx, ny, nz], which is written and read in row-major order (first index - nz changes fastest), into a binary file.
     Parameters:
@@ -11,7 +11,7 @@ def write_array_to_file(filename, array,):
         array_column_major : 1d numpy array with shape [nx*ny*nz], written in column-major order(last index - nx changes fastest)
     
     """
-    array_column_major = np.reshape(array, (-1), order='F')
+    array_column_major = np.reshape(array, (-1), order='F', dtype=dtype)
 
     with open(filename, "wb") as f:
         array_column_major.tofile(f)
@@ -49,16 +49,11 @@ def gaussian_ic(domain, dims, mu_L=np.array([0.2, 0.5, 0.5]), sigma=1e-2):
         data   : 3d numpy array with shape of [nx, ny, nz]
     
     """
-    Lx, Ly, Lz = domain
-    nx, ny, nz = dims
-
-    x = np.linspace(0, Lx, nx)
-    y = np.linspace(0, Ly, ny)
-    z = np.linspace(0, Lz, nz)
+    x, y, z =  xyz(domain, dims)
     
     x0, y0, z0 = mu_L*domain
     
-    data = np.zeros((nx, ny, nz))
+    data = np.zeros(dims)
     for i, xx in enumerate(x):
         for j, yy in enumerate(y):
             for k, zz in enumerate(z):
@@ -66,7 +61,7 @@ def gaussian_ic(domain, dims, mu_L=np.array([0.2, 0.5, 0.5]), sigma=1e-2):
     data = data/data.max()
     return data
 
-def xyz(domain, dims):
+def xyz(domain, dims, stretch=True, str_factor=1.5):
     # Define the range and number of points in each direction
     x_range = (0, domain[0])
     y_range = (0, domain[1])
@@ -77,6 +72,11 @@ def xyz(domain, dims):
     x_coords = np.linspace(x_range[0], x_range[1], n_x)
     y_coords = np.linspace(y_range[0], y_range[1], n_y)
     z_coords = np.linspace(z_range[0], z_range[1], n_z)
+
+    # k(uv) grid
+    if stretch:
+        z_stretch = z_range[1]*(1+(np.tanh(str_factor*(z_coords/z_range[1]-1))/np.tanh(str_factor)))
+        return x_coords, y_coords, z_stretch
     
     return x_coords, y_coords, z_coords
 
