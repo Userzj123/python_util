@@ -1,6 +1,6 @@
 import numpy as np 
 import matplotlib.pyplot as plt
-from .turb.generate_field import *
+from .generate_field import *
 from matplotlib import cm, colors
 import os
 import imageio

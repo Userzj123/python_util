@@ -3,6 +3,37 @@ import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 
 
+def generate_gif(timestep, ldata, fig_dir, var, k, marker, **fig_args):
+    import os
+    import imageio
+    gif_dir = './gif'
+    if not os.path.exists(gif_dir):
+        os.makedirs(gif_dir)
+    filenames = []
+    for i in timestep:
+        ldata.read_data(i)
+        fig, ax = contour_channel(ldata.coords, ldata.data[var][k], **fig_args)
+        
+        # create file name and append it to a list
+        filename = gif_dir + f'/%.5i.png' % i
+        filenames.append(filename)
+        
+        # save frame
+        fig.savefig(filename, bbox_inches='tight')
+        plt.close()
+    # build gif
+    gif_fname = fig_dir + '/%s_%.2i_%s.gif' %(var, k, marker)
+    with imageio.get_writer(gif_fname, mode='I') as writer:
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+            
+    # Remove files
+    for filename in set(filenames):
+        os.remove(filename)
+    return 
+
+
 def contour_single(coords, data, levs=61, eshrink=5/6, **fig_kw):
     """
     Generate single contour given x, y and data.
@@ -28,7 +59,7 @@ def contour_single(coords, data, levs=61, eshrink=5/6, **fig_kw):
     return fig, ax
 
 
-def contour_channel(coords, data, colormap = cm.Oranges):
+def contour_channel(coords, data, **kwargs):
     """
     plot the contour of x, y, z cross section in channel flow at the maximum index.
 
@@ -43,14 +74,24 @@ def contour_channel(coords, data, colormap = cm.Oranges):
     from matplotlib.gridspec import GridSpec
     import matplotlib.ticker as tick
     
+        
+    defaultKwargs = {
+        'alpha' : 0.1,
+        'vmin' : round(data.min(), 1),
+        'vmax' : round(data.max(), 1),
+        'cmap' : cm.Oranges
+    }
+    
+    
+    kwargs = { **defaultKwargs, **kwargs }
+    
+    
     x_coords, y_coords, z_coords = coords
     domain = tuple([d.max() for d in coords])
     dims = tuple([d.shape[0] for d in coords])
     x_ind, y_ind, z_ind = np.unravel_index(data.argmax(), dims)
-    
-    vmin = round(data.min(), 1)
-    vmax = round(data.max(), 1)
-    levels = np.linspace(vmin, vmax, 101)
+
+    levels = np.linspace(kwargs['vmin'], kwargs['vmax'], 101)
 
     fig = plt.figure(layout="constrained", figsize=(8,4))
 
@@ -63,7 +104,9 @@ def contour_channel(coords, data, colormap = cm.Oranges):
 
 
     images = []
-    images.append(ax1.contourf(x_coords, y_coords, data[:, :, z_ind].T, levels, cmap=colormap, extend='both'))
+    ax1.vlines(x_coords[x_ind], y_coords.min(), y_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
+    ax1.hlines(y_coords[y_ind], x_coords.min(), x_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
+    images.append(ax1.contourf(x_coords, y_coords, data[:, :, z_ind].T, levels, cmap=kwargs['cmap'], extend='both'))
     ax1.set_xlabel('x')
     ax1.set_ylabel('y')
     ax1.set_aspect('equal', 'box')
@@ -71,14 +114,14 @@ def contour_channel(coords, data, colormap = cm.Oranges):
     # cbar = fig.colorbar(cs)
 
 
-    images.append(ax2.contourf(x_coords, z_coords, data[:, y_ind, :].T, levels, cmap=colormap, extend='both'))
+    images.append(ax2.contourf(x_coords, z_coords, data[:, y_ind, :].T, levels, cmap=kwargs['cmap'], extend='both'))
     ax2.set_xlabel('x')
     ax2.set_ylabel('z')
     ax2.set_aspect('equal', 'box')
     ax2.set_ylim(bottom=0)
     # cbar = fig.colorbar(cs1)
 
-    images.append(ax3.contourf(y_coords, z_coords, data[x_ind, :, :].T, levels, cmap=colormap, extend='both'))
+    images.append(ax3.contourf(y_coords, z_coords, data[x_ind, :, :].T, levels, cmap=kwargs['cmap'], extend='both'))
     ax3.set_xlabel('y')
     ax3.set_ylabel('z')
     ax3.set_aspect('equal', 'box')
@@ -99,3 +142,7 @@ def contour_channel(coords, data, colormap = cm.Oranges):
 class plot_format():
     def __init__(self,):
         return
+    
+    
+if __name__ == "__main__":
+    1

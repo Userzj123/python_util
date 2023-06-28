@@ -6,7 +6,7 @@ import sys
 import glob
 import contextlib
 from PIL import Image
-from turb.generate_field import read_array_from_file, write_array_to_file
+from generate_field import read_array_from_file, write_array_to_file
 
 def write_array_to_file(filename, array,):
     out = []
