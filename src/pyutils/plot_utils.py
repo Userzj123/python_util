@@ -79,7 +79,8 @@ def contour_channel(coords, data, **kwargs):
         'alpha' : 0.1,
         'vmin' : round(data.min(), 1),
         'vmax' : round(data.max(), 1),
-        'cmap' : cm.Oranges
+        'cmap' : cm.Oranges,
+        'levels': 101
     }
     
     
@@ -91,7 +92,7 @@ def contour_channel(coords, data, **kwargs):
     dims = tuple([d.shape[0] for d in coords])
     x_ind, y_ind, z_ind = np.unravel_index(data.argmax(), dims)
 
-    levels = np.linspace(kwargs['vmin'], kwargs['vmax'], 101)
+    levels = np.linspace(kwargs['vmin'], kwargs['vmax'], kwargs['levels'])
 
     fig = plt.figure(layout="constrained", figsize=(8,4))
 
@@ -113,7 +114,8 @@ def contour_channel(coords, data, **kwargs):
     ax1.set_ylim(bottom=0)
     # cbar = fig.colorbar(cs)
 
-
+    ax2.vlines(x_coords[x_ind], z_coords.min(), z_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
+    ax2.hlines(z_coords[z_ind], x_coords.min(), x_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     images.append(ax2.contourf(x_coords, z_coords, data[:, y_ind, :].T, levels, cmap=kwargs['cmap'], extend='both'))
     ax2.set_xlabel('x')
     ax2.set_ylabel('z')
@@ -121,6 +123,8 @@ def contour_channel(coords, data, **kwargs):
     ax2.set_ylim(bottom=0)
     # cbar = fig.colorbar(cs1)
 
+    ax3.vlines(y_coords[y_ind], z_coords.min(), z_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
+    ax3.hlines(z_coords[z_ind], y_coords.min(), y_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     images.append(ax3.contourf(y_coords, z_coords, data[x_ind, :, :].T, levels, cmap=kwargs['cmap'], extend='both'))
     ax3.set_xlabel('y')
     ax3.set_ylabel('z')

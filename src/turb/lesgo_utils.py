@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pyutils.plot_utils as pltutils
+import os
 
 def write_array_to_file(filename, array, gen_fig=False, **kwargs):
     """
@@ -18,7 +19,7 @@ def write_array_to_file(filename, array, gen_fig=False, **kwargs):
         array_column_major.tofile(f)
 
     if gen_fig:
-        defaultKwargs = {'domain': (2*np.pi, 2*np.pi, 1), 'dims': (128, 128, 64) }
+        defaultKwargs = {'domain': (2*np.pi, np.pi, 1), 'dims': (128, 128, 64) }
         kwargs = { **defaultKwargs, **kwargs }
         
         coords = coords_xyz(kwargs['domain'], kwargs['dims'])
@@ -82,7 +83,16 @@ class lesgo_data():
     """
     
     def __init__(self, domain, dims, root_dir, ntheta=1) -> None:
-        self.dir = root_dir + '/outputs'
+        if not os.path.exists(root_dir):
+            os.makedirs(root_dir)
+            print('create root folder in %s' % root_dir)
+        self.inputs_dir = root_dir + '/inputs'
+        if not os.path.exists(self.inputs_dir):
+            os.makedirs(self.inputs_dir)
+            print('create inputs folder in %s' % self.inputs_dir)
+            
+        
+        self.outputs_dir = root_dir + '/outputs'
         self.coords = coords_xyz(domain, dims, center=True, stretch=True)
         self.domain = domain
         self.dims = dims
@@ -98,10 +108,31 @@ class lesgo_data():
         self.ihalf_coords = coords_xyz(domain, self.ihalf_dims, center=False, stretch=True)
         self.jhalf_coords = coords_xyz(domain, self.jhalf_dims, center=False, stretch=True)
         
+        # initialize dataset file names
+        self.set_adjoint(adjoint=False)
+        
+    # Post-processing
     def read_data(self, t_ind):
         self.read_velocity(t_ind)
         self.read_scalar(t_ind)
         
+        return
+    
+    def _fnames(self,):
+        if not self.adjoint :
+            self.u_f = self.outputs_dir + r'/baseflow/u_base.%.8i'
+            self.v_f = self.outputs_dir + r'/baseflow/v_base.%.8i'
+            self.w_f = self.outputs_dir + r'/baseflow/w_base.%.8i'
+        else:
+            self.u_f = self.outputs_dir + r'/u_velocity.%.8i'
+            self.v_f = self.outputs_dir + r'/v_velocity.%.8i'
+            self.w_f = self.outputs_dir + r'/w_velocity.%.8i'
+        
+        self.theta_f = self.outputs_dir + r'/theta.%.2i.%.8i'
+    
+    def set_adjoint(self, adjoint = False):
+        self.adjoint = adjoint
+        self._fnames()
         return
     
     def read_debug(self, t_ind):
@@ -111,13 +142,9 @@ class lesgo_data():
         return
     
     def read_velocity(self, t_ind):
-        u_f = self.dir + r'/baseflow/u_base.%.8i'
-        v_f = self.dir + r'/baseflow/v_base.%.8i'
-        w_f = self.dir + r'/baseflow/w_base.%.8i'
-        
-        u = read_array_from_file(u_f % t_ind, self.dims)
-        v = read_array_from_file(v_f % t_ind, self.dims)
-        w = read_array_from_file(w_f % t_ind, self.dims)
+        u = read_array_from_file(self.u_f % t_ind, self.dims)
+        v = read_array_from_file(self.v_f % t_ind, self.dims)
+        w = read_array_from_file(self.w_f % t_ind, self.dims)
         
         self.data['u'] = u
         self.data['v'] = v
@@ -133,19 +160,17 @@ class lesgo_data():
     
     
     def read_scalar(self, t_ind):
-        theta_f = self.dir + r'/theta.%.2i.%.8i'
-
-        thetas = self._read_multi_scalar(theta_f, t_ind, self.dims)
+        thetas = self._read_multi_scalar(self.theta_f, t_ind, self.dims)
         
         self.data['theta'] = thetas
         return thetas
     
     def debug_advection_scalar(self, t_ind):
-        adv_f = self.dir + r'/advection.%.2i.%.8i'
+        adv_f = self.outputs_dir + r'/advection.%.2i.%.8i'
         
-        dTdx_f = self.dir + r'/dTdx.%.2i.%.8i'
-        dTdy_f = self.dir + r'/dTdy.%.2i.%.8i'
-        dTdz_f = self.dir + r'/dTdz.%.2i.%.8i'
+        dTdx_f = self.outputs_dir + r'/dTdx.%.2i.%.8i'
+        dTdy_f = self.outputs_dir + r'/dTdy.%.2i.%.8i'
+        dTdz_f = self.outputs_dir + r'/dTdz.%.2i.%.8i'
         
         self.data['adv'] = self._read_multi_scalar(adv_f, t_ind, self.dims)
 
@@ -156,15 +181,15 @@ class lesgo_data():
         return
 
     def debug_diffusion_scalar(self, t_ind):
-        diff_f = self.dir + r'/diffusion.%.2i.%.8i'
+        diff_f = self.outputs_dir + r'/diffusion.%.2i.%.8i'
         
-        u_ihalf_f = self.dir + r'/u_ihalf.%.2i.%.8i'
-        v_jhalf_f = self.dir + r'/v_jhalf.%.2i.%.8i'
-        w_kw_f = self.dir + r'/w_kw.%.2i.%.8i'
+        u_ihalf_f = self.outputs_dir + r'/u_ihalf.%.2i.%.8i'
+        v_jhalf_f = self.outputs_dir + r'/v_jhalf.%.2i.%.8i'
+        w_kw_f = self.outputs_dir + r'/w_kw.%.2i.%.8i'
         
-        theta_ihalf_f = self.dir + r'/theta_ihalf.%.2i.%.8i'
-        theta_jhalf_f = self.dir + r'/theta_jhalf.%.2i.%.8i'
-        theta_kw_f = self.dir + r'/theta_kw.%.2i.%.8i'
+        theta_ihalf_f = self.outputs_dir + r'/theta_ihalf.%.2i.%.8i'
+        theta_jhalf_f = self.outputs_dir + r'/theta_jhalf.%.2i.%.8i'
+        theta_kw_f = self.outputs_dir + r'/theta_kw.%.2i.%.8i'
         
         self.data["diff"] = self._read_multi_scalar(diff_f, t_ind, self.dims)
         
@@ -177,6 +202,34 @@ class lesgo_data():
         self.data["theta_kw"] = self._read_multi_scalar(theta_kw_f, t_ind, self.dims)
         
         return
+    
+    # [WorkingOn]
+    # def sensor_location(self, loc_coords):
+    #     """_summary_
+
+    #     Args:
+    #         loc_coords (_type_): input the location of sensor in Cartesian coordinate
+            
+    #     return: 
+    #         coords_index (_type_): return the indices of sensor location in given domain.
+    #     """
+    #     self.npoints = len(loc_coords[0])
+        
+    #     # coords = [x, y, z], loc_coords = [px, py, pz]
+    #     return
+    
+    # def sensor_measurements(self, tspan):
+    #     tmin, tmax = tspan
+    #     for t in range(int(tmin), int(tmax)):
+    #         self.read_data(t)
+    #         for ind, x in self.sensor_coords:
+    #             measurement = self.data['theta'][:, x[0, ind], x[1, ind], x[2, ind]]
+        
+        
+    #     return 
+    
+    
+    # Pre-processing
         
     def generate_ic(self, **kwargs):
         defaultKwargs = {
@@ -207,9 +260,10 @@ class lesgo_data():
             'dtype'             : np.float64,
             'homogeneous'       : 'None',
             'source_point'      : [1, 1, 0.5],
-            'inputs_dir'        : self.dir + '/inputs',
+            'ic_dir'            : self.inputs_dir,
             'varname'           : 'theta',
-            'nk'                : 1
+            'nk'                : 1,
+            'readme_text'       : 'Domain =' + str(self.domain) + ', Dims = ' + str(self.dims) + ', nk = ' + str(kwargs['nk']) + ', Source at ' + str(kwargs['source_point'])
         }
         kwargs = { **defaultKwargs, **kwargs }
         
@@ -221,7 +275,7 @@ class lesgo_data():
         z_homo = 0 if 'z' in kwargs['homogeneous'].lower() else 1
 
         
-        data = np.zeros(dims, dtype=kwargs['dtype'])
+        data = np.zeros(self.dims, dtype=kwargs['dtype'])
         for i, xx in enumerate(x):
             for j, yy in enumerate(y):
                 for k, zz in enumerate(z):
@@ -229,8 +283,24 @@ class lesgo_data():
         data = data/data.max()
         
         
-        ic_fname = kwargs['inputs_dir'] + '/%s.%.2i.IC' %(kwargs['varname'], kwargs['nk'])
+        ic_fname = kwargs['ic_dir'] + '/%s.IC.%.2i' %(kwargs['varname'], kwargs['nk'])
+        
+        ic_readme_fname = self.inputs_dir + '/readme.md'
+        from datetime import datetime
+            
+        with open(ic_readme_fname, "a+") as f:
+            f.write(datetime.today().strftime('%Y-%m-%d'))
+            f.write('  Update Initial Condition\n')
+            f.write(kwargs['readme_text'] + '\n')
+        
         return write_array_to_file(ic_fname, data, **kwargs)
+    
+    def source_sameasic(self,):
+        import shutil            
+        ic_files = [filename for filename in os.listdir(self.inputs_dir) if filename.startswith("theta")]
+        new_fname = ['./source.'+fname.split('.')[-1] for fname in ic_files]
+        [shutil.copyfile(self.inputs_dir+ '/' + ic_files[ind], self.inputs_dir+name) for ind, name in enumerate(new_fname)]
+        return new_fname
         
         
 if __name__ == "__main__":
