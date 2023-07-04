@@ -140,17 +140,7 @@ class lesgo_data():
         self.debug_diffusion_scalar(t_ind)
         
         return
-    
-    def read_sensor(self, sensor_locs, tt):
-        sx, sy, sz = sensor_locs
-        nsensor = len(sx)
-        obs = []
-        for t_ind in tt:
-            self.read_scalar(t_ind) 
-            [obs.append(self.data['theta'][sx[np], sy[np], sz[np]]) for np in range(nsensor)]
-            
-        obs = np.reshape(np.array(obs), (nsensor, -1))
-        return obs
+
     
     def read_velocity(self, t_ind):
         u = read_array_from_file(self.u_f % t_ind, self.dims)
@@ -238,6 +228,21 @@ class lesgo_data():
         
         
     #     return 
+    
+    def read_sensor(self, sensor_locs, tt):
+        # sx, sy, sz = sensor_locs
+        # nsensor = len(sx)
+        # obs = []
+        # for t_ind in tt:
+        #     self.read_scalar(t_ind) 
+        #     [obs.append(self.data['theta'][sx[np], sy[np], sz[np]]) for np in range(nsensor)]
+            
+        # self.data['obs'] = np.reshape(np.array(obs), (nsensor, -1))
+        return
+        
+    def sensor_gaussian_ic(self, nsensors=3):
+        
+        return
     
     
     # Pre-processing
