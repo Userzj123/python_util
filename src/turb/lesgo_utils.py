@@ -90,17 +90,23 @@ class lesgo_data():
         
         return
     
-    def _fnames(self,):
-        if not self.adjoint :
-            self.u_f = self.outputs_dir + r'/baseflow/u_base.%.8i'
-            self.v_f = self.outputs_dir + r'/baseflow/v_base.%.8i'
-            self.w_f = self.outputs_dir + r'/baseflow/w_base.%.8i'
-        else:
-            self.u_f = self.outputs_dir + r'/u_velocity.%.8i'
-            self.v_f = self.outputs_dir + r'/v_velocity.%.8i'
-            self.w_f = self.outputs_dir + r'/w_velocity.%.8i'
+    def _fnames(self, **fmt_kwargs):
+        defaultKwargs = {
+            'fmt_tstep'   : r'%.8i',
+            'fmt_ntheta'   : r'%.2i'
+        }
+        self.fmt_kwargs = { **defaultKwargs, **fmt_kwargs }
         
-        self.theta_f = self.outputs_dir + r'/theta.%.2i.%.8i'
+        if not self.adjoint :
+            self.u_f = self.outputs_dir + r'/baseflow/u_base.' + self.fmt_kwargs['fmt_tstep']
+            self.v_f = self.outputs_dir + r'/baseflow/v_base.' + self.fmt_kwargs['fmt_tstep']
+            self.w_f = self.outputs_dir + r'/baseflow/w_base.' + self.fmt_kwargs['fmt_tstep']
+        else:
+            self.u_f = self.outputs_dir + r'/u_velocity.' + self.fmt_kwargs['fmt_tstep']
+            self.v_f = self.outputs_dir + r'/v_velocity.' + self.fmt_kwargs['fmt_tstep']
+            self.w_f = self.outputs_dir + r'/w_velocity.' + self.fmt_kwargs['fmt_tstep']
+        
+        self.theta_f = self.outputs_dir + r'/theta.' + self.fmt_kwargs['fmt_ntheta'] + '.' + self.fmt_kwargs['fmt_tstep']
     
     def set_adjoint(self, adjoint = False):
         self.adjoint = adjoint
@@ -139,11 +145,11 @@ class lesgo_data():
         return thetas
     
     def debug_advection_scalar(self, t_ind):
-        adv_f = self.outputs_dir + r'/advection.%.2i.%.8i'
+        adv_f = self.outputs_dir + r'/advection.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
-        dTdx_f = self.outputs_dir + r'/dTdx.%.2i.%.8i'
-        dTdy_f = self.outputs_dir + r'/dTdy.%.2i.%.8i'
-        dTdz_f = self.outputs_dir + r'/dTdz.%.2i.%.8i'
+        dTdx_f = self.outputs_dir + r'/dTdx.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        dTdy_f = self.outputs_dir + r'/dTdy.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        dTdz_f = self.outputs_dir + r'/dTdz.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
         self.data['adv'] = self._read_multi_scalar(adv_f, t_ind, self.dims)
 
@@ -154,15 +160,15 @@ class lesgo_data():
         return
 
     def debug_diffusion_scalar(self, t_ind):
-        diff_f = self.outputs_dir + r'/diffusion.%.2i.%.8i'
+        diff_f = self.outputs_dir + r'/diffusion.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
-        u_ihalf_f = self.outputs_dir + r'/u_ihalf.%.2i.%.8i'
-        v_jhalf_f = self.outputs_dir + r'/v_jhalf.%.2i.%.8i'
-        w_kw_f = self.outputs_dir + r'/w_kw.%.2i.%.8i'
+        u_ihalf_f = self.outputs_dir + r'/u_ihalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        v_jhalf_f = self.outputs_dir + r'/v_jhalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        w_kw_f = self.outputs_dir + r'/w_kw.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
-        theta_ihalf_f = self.outputs_dir + r'/theta_ihalf.%.2i.%.8i'
-        theta_jhalf_f = self.outputs_dir + r'/theta_jhalf.%.2i.%.8i'
-        theta_kw_f = self.outputs_dir + r'/theta_kw.%.2i.%.8i'
+        theta_ihalf_f = self.outputs_dir + r'/theta_ihalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        theta_jhalf_f = self.outputs_dir + r'/theta_jhalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        theta_kw_f = self.outputs_dir + r'/theta_kw.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
         self.data["diff"] = self._read_multi_scalar(diff_f, t_ind, self.dims)
         
@@ -250,11 +256,13 @@ class lesgo_data():
     
     def sensor_measurements(self, sensor_locs, tt, **kwargs):
         import imageio
+        from datetime import datetime
         defaultKwargs = {
-            'gif_fname' : './result.gif'
+            'gif_fname' : './result' 
         }
         kwargs = { **defaultKwargs, **kwargs }
         
+        kwargs['gif_fname'] += '_%s.gif' % datetime.today().strftime('%Y-%m-%d')
         
         self.sensor_init_(sensor_locs)
         self.obs_t = tt
@@ -284,7 +292,7 @@ class lesgo_data():
             # save frame
             fig.savefig(filename, bbox_inches='tight')
             plt.close()
-                    
+            
         # build gif
         with imageio.get_writer(kwargs['gif_fname'], mode='I') as writer:
             for filename in filenames:
@@ -357,7 +365,7 @@ class lesgo_data():
         data = data/data.max()
         
         
-        fname = kwargs['input_dir'] + '/%s.%.2i' %(kwargs['fieldname'], kwargs['nk'])
+        fname = (kwargs['input_dir'] + '/%s.' + self.fmt_kwargs['fmt_ntheta']) %(kwargs['fieldname'], kwargs['nk'])
         
         ic_readme_fname = self.inputs_dir + '/readme.md'
         from datetime import datetime
@@ -380,6 +388,7 @@ class lesgo_data():
             'readme_text'        : ''
         }
         kwargs = { **defaultKwargs, **kwargs }
+        kwargs['gen_fig'] = False
         
         kwargs['readme_text'] += 'Domain =' + str(self.domain) + ', Dims = ' + str(self.dims) + ', nk = ' + str(kwargs['nk']) + ', Constant of ' + str(kwargs['const'])
 
@@ -389,7 +398,7 @@ class lesgo_data():
         data += kwargs['const']
         
         
-        fname = kwargs['input_dir'] + '/%s.%.2i' %(kwargs['fieldname'], kwargs['nk'])
+        fname = (kwargs['input_dir'] + '/%s.' + self.fmt_kwargs['fmt_ntheta']) %(kwargs['fieldname'], kwargs['nk'])
         
         ic_readme_fname = self.inputs_dir + '/readme.md'
         from datetime import datetime
@@ -399,7 +408,7 @@ class lesgo_data():
             f.write('Update %s\n' % fname)
             f.write(kwargs['readme_text'] + '\n')
         
-        return write_array_to_file(fname, data, gen_fig=False, **kwargs)
+        return write_array_to_file(fname, data, **kwargs)
     
     def source_sameasic(self,):
         import shutil            
@@ -410,23 +419,14 @@ class lesgo_data():
         
     # [Working On]
     def adjoint_ratio(self,):
-        
+        return
         
         
 if __name__ == "__main__":
-    root_dir = '/home/zyou6474/tasks/channel_flow'
+    root_dir = '/home/zyou6474/tasks/adjoint_steady_channel_flow'
     dims = [128, 128, 64]
     domain = [2*np.pi, np.pi, 1]
 
-    self = lesgo_data(domain, dims, root_dir, ntheta=3)
+    ldata = lesgo_data(domain, dims, root_dir, ntheta=3)
 
-    self.read_data(1)
-    self.data['theta'].shape
-
-    sx = (4/3*np.pi, 4/3*np.pi, 4/3*np.pi)
-    sy = (1/2*np.pi, 1/2*np.pi, 1/2*np.pi)
-    sz = (1/4, 2/4, 3/4)
-
-    sensor_locs = (sx, sy, sz)
-    tt = np.arange(0, 50, 1)
-    self.sensor_measurements(sensor_locs, tt)
+    ldata.gaussian_field(fieldname = 'theta.IC', nk=3, source_point = [np.pi*5/3, np.pi/2, 2/3], gen_fig=True, variance=1e-2)
