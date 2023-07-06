@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pyutils.plot_utils as pltutils
+from pyutils.cartesian import coords_xyz, meshgrid
 import os
 
 def write_array_to_file(filename, array, gen_fig=False, **kwargs):
@@ -17,12 +18,13 @@ def write_array_to_file(filename, array, gen_fig=False, **kwargs):
 
     with open(filename, "wb") as f:
         array_column_major.tofile(f)
+    print('write data into %s' % filename)
 
     if gen_fig:
         defaultKwargs = {'domain': (2*np.pi, np.pi, 1), 'dims': (128, 128, 64) }
         kwargs = { **defaultKwargs, **kwargs }
         
-        coords = coords_xyz(kwargs['domain'], kwargs['dims'])
+        coords = coords_xyz(kwargs['domain'], kwargs['dims'], center=True, stretch=True)
         fig = pltutils.contour_channel(coords, array)
         return fig, array_column_major
     else:
@@ -46,36 +48,6 @@ def read_array_from_file(filename, shape, dtype=np.float64):
 
     return array
 
-def coords_xyz(domain, dims, stretch=False, str_factor=1.5, center=False):
-    # Define the range and number of points in each direction
-    x_range = (0, domain[0])
-    y_range = (0, domain[1])
-    z_range = (0, domain[2])
-    n_x, n_y, n_z = dims
-
-    if center:
-        # Generate 1D arrays of x, y, and z coordinates
-        x_coords = np.linspace(x_range[0], x_range[1], int(n_x)+1)
-        y_coords = np.linspace(y_range[0], y_range[1], int(n_y)+1)
-        z_coords = np.linspace(z_range[0], z_range[1], int(n_z)+1)
-    
-        x_coords = 0.5 * x_coords[:-1] + 0.5 * x_coords[1:]
-        y_coords = 0.5 * y_coords[:-1] + 0.5 * y_coords[1:]
-        z_coords = 0.5 * z_coords[:-1] + 0.5 * z_coords[1:]
-        
-    else:
-        # Generate 1D arrays of x, y, and z coordinates
-        x_coords = np.linspace(x_range[0], x_range[1], int(n_x))
-        y_coords = np.linspace(y_range[0], y_range[1], int(n_y))
-        z_coords = np.linspace(z_range[0], z_range[1], int(n_z))
-
-    # k(uv) grid
-    if stretch:
-        z_stretch = z_range[1]*(1+(np.tanh(str_factor*(z_coords/z_range[1]-1))/np.tanh(str_factor)))
-        return x_coords, y_coords, z_stretch
-    
-    return x_coords, y_coords, z_coords
-
 class lesgo_data():
     """
     Read lesgo's simulation result files.
@@ -96,7 +68,7 @@ class lesgo_data():
         self.coords = coords_xyz(domain, dims, center=True, stretch=True)
         self.domain = domain
         self.dims = dims
-        self.ntheta = ntheta
+        self.ntheta : np.int64 = ntheta
         
         self.data = {}
         
@@ -204,40 +176,126 @@ class lesgo_data():
         
         return
     
-    # [WorkingOn]
-    # def sensor_location(self, loc_coords):
-    #     """_summary_
+    # [Done] - Jul 5, 2023
+    def sensor_init_(self, s_locs):
+        """_summary_
 
-    #     Args:
-    #         loc_coords (_type_): input the location of sensor in Cartesian coordinate
+        Args:
+            loc_coords (_type_): input the location of sensor in Cartesian coordinate
             
-    #     return: 
-    #         coords_index (_type_): return the indices of sensor location in given domain.
-    #     """
-    #     self.npoints = len(loc_coords[0])
+        return: 
+            coords_index (_type_): return the indices of sensor location in given domain.
+        """
+        self.nsensors = len(s_locs[0])
         
-    #     # coords = [x, y, z], loc_coords = [px, py, pz]
-    #     return
+        # coords = [x, y, z], loc_coords = [px, py, pz]
+        
+        self.s_locs = s_locs
+        return
     
-    # def sensor_measurements(self, tspan):
-    #     tmin, tmax = tspan
-    #     for t in range(int(tmin), int(tmax)):
-    #         self.read_data(t)
-    #         for ind, x in self.sensor_coords:
-    #             measurement = self.data['theta'][:, x[0, ind], x[1, ind], x[2, ind]]
+    def channel_obs(self, **kwargs):
+        from matplotlib import cm, colors, ticker
+        import matplotlib.ticker as tick
+        from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+        defaultKwargs = {
+            'alpha' : 0.1,
+            'vmin' : self.data['theta'].min(),
+            'vmax' : self.data['theta'].max(),
+            'cmap' : cm.Oranges,
+            'levels': 101,
+            'figsize' : (8, 8),
+            'dpi'   : 150,
+            'nk'    : 1,
+            'y_ind' : 64,
+            'clip'  : False,
+            'norm'  : colors.Normalize
+        }
+        kwargs = { **defaultKwargs, **kwargs }
         
+        levels = np.linspace(kwargs['vmin'], kwargs['vmax'], kwargs['levels'])
+
+        fig, axes = plt.subplots(self.ntheta+1, 1, figsize=kwargs['figsize'], dpi = kwargs['dpi'])
+        axes = axes.flatten()
+
+        ct1 = axes[0].contourf(self.coords[0], self.coords[2], self.data['theta'][kwargs['nk'], :, kwargs['y_ind'], :].T, levels=kwargs['levels'],
+                    norm=kwargs['norm'](vmin=kwargs['vmin'], vmax=kwargs['vmax'], clip=kwargs['clip']), cmap=kwargs['cmap'], 
+                    )
+        axes[0].scatter(self.s_locs[0], self.s_locs[-1], marker='o', color='black', s = 1)
+        axes[0].set_xlabel('x')
+        axes[0].set_ylabel('z')
+        axes[0].set_aspect('equal', 'box')
+        axes[0].set_ylim(bottom=0)
         
-    #     return 
-    
-    def read_sensor(self, sensor_locs, tt):
-        # sx, sy, sz = sensor_locs
-        # nsensor = len(sx)
-        # obs = []
-        # for t_ind in tt:
-        #     self.read_scalar(t_ind) 
-        #     [obs.append(self.data['theta'][sx[np], sy[np], sz[np]]) for np in range(nsensor)]
+        ax1_divider = make_axes_locatable(axes[0])
+        # Add an Axes to the right of the main Axes.
+        cax1 = ax1_divider.append_axes("right", size="2%", pad="1%")
+        cbar = fig.colorbar(
+            cm.ScalarMappable(norm=kwargs['norm'](vmin=kwargs['vmin'], vmax=kwargs['vmax'], clip=kwargs['clip']), cmap=kwargs['cmap']),
+            extend='both', cax = cax1,
+                            )
+
+        # cbar.set_ticks(levels[::10])
+        # cbar.ax.yaxis.set_major_formatter(tick.FormatStrFormatter('%.1f'))
+
+        for i in range(self.nsensors):
+            axes[i+1].plot(self.obs_t, self.data['obs'][i, kwargs['nk'], :], color='black', label='obs', linewidth=0.5)
+            axes[i+1].set_xlabel('t')
+            axes[i+1].set_ylabel('theta')
+            axes[i+1].set_ylim(kwargs['vmin'], kwargs['vmax'])
+            axes[i+1].set_xlim(self.obs_t.min(), self.obs_t.max())
+            axes[i+1].legend(frameon=False)
             
-        # self.data['obs'] = np.reshape(np.array(obs), (nsensor, -1))
+        return fig, axes
+    
+    
+    def sensor_measurements(self, sensor_locs, tt, **kwargs):
+        import imageio
+        defaultKwargs = {
+            'gif_fname' : './result.gif'
+        }
+        kwargs = { **defaultKwargs, **kwargs }
+        
+        
+        self.sensor_init_(sensor_locs)
+        self.obs_t = tt
+        
+        mesh = meshgrid(domain=self.domain, dims = self.dims)
+        xi, yi, zi = mesh.cartesian2index(sensor_locs)
+        
+        gif_dir = './tmp_gif'
+        if not os.path.exists(gif_dir):
+            os.makedirs(gif_dir)
+        filenames = []
+    
+    
+        nsensor = len(xi)
+        self.data['obs'] = np.full(shape=(nsensor, self.ntheta, len(tt)), fill_value=np.nan)
+        for t_ind, t in enumerate(tt):
+            self.read_scalar(t) 
+            for ns in range(self.ntheta):
+                for ind in range(nsensor):
+                    self.data['obs'][ind, ns, t_ind] = self.data['theta'][ns, xi[ind], yi[ind], zi[ind]] 
+                
+            fig, ax = self.channel_obs(**kwargs)
+            # create file name and append it to a list
+            filename = gif_dir + f'/%.5i.png' % t
+            filenames.append(filename)
+            
+            # save frame
+            fig.savefig(filename, bbox_inches='tight')
+            plt.close()
+                    
+        # build gif
+        with imageio.get_writer(kwargs['gif_fname'], mode='I') as writer:
+            for filename in filenames:
+                image = imageio.imread(filename)
+                writer.append_data(image)
+        print('gif written in %s' % kwargs['gif_fname'])
+                
+        # Remove files
+        for filename in set(filenames):
+            os.remove(filename)
+            
         return
         
     def sensor_gaussian_ic(self, nsensors=3):
@@ -257,7 +315,7 @@ class lesgo_data():
         if kwargs['ic_type'] == 'gaussian':
             self.gaussian_ic(**kwargs)
             
-    def gaussian_ic(self, **kwargs):
+    def gaussian_field(self, **kwargs):
         """
         Generate a 3 dimensional numpy array with shape of [nx, ny, nz], which has a normal distribution with mean of mu_L=[x0, y0, z0] and variance of sigma. And the maximum value is set to be 1 in order to keep the magnitude same for differet IC.
         theta = e^(-((x-x0)^2 + (y-y0)^2 + (z-z0)^2)/(2*sigma^2))
@@ -276,8 +334,8 @@ class lesgo_data():
             'dtype'             : np.float64,
             'homogeneous'       : 'None',
             'source_point'      : [1, 1, 0.5],
-            'ic_dir'            : self.inputs_dir,
-            'varname'           : 'theta',
+            'input_dir'         : self.inputs_dir,
+            'fieldname'         : 'theta.IC',
             'nk'                : 1,
             'readme_text'       : 'Domain =' + str(self.domain) + ', Dims = ' + str(self.dims) + ', nk = ' + str(kwargs['nk']) + ', Source at ' + str(kwargs['source_point'])
         }
@@ -299,33 +357,76 @@ class lesgo_data():
         data = data/data.max()
         
         
-        ic_fname = kwargs['ic_dir'] + '/%s.IC.%.2i' %(kwargs['varname'], kwargs['nk'])
+        fname = kwargs['input_dir'] + '/%s.%.2i' %(kwargs['fieldname'], kwargs['nk'])
         
         ic_readme_fname = self.inputs_dir + '/readme.md'
         from datetime import datetime
             
         with open(ic_readme_fname, "a+") as f:
             f.write(datetime.today().strftime('%Y-%m-%d'))
-            f.write('  Update Initial Condition\n')
+            f.write('Update %s\n' % fname)
             f.write(kwargs['readme_text'] + '\n')
         
-        return write_array_to_file(ic_fname, data, **kwargs)
+        return write_array_to_file(fname, data, **kwargs)
+    
+              
+    def constant_field(self, **kwargs):
+        defaultKwargs = {
+            'const'             : 0,
+            'dtype'             : np.float64,
+            'input_dir'         : self.inputs_dir,
+            'fieldname'         : 'theta.IC',
+            'nk'                : 1,
+            'readme_text'        : ''
+        }
+        kwargs = { **defaultKwargs, **kwargs }
+        
+        kwargs['readme_text'] += 'Domain =' + str(self.domain) + ', Dims = ' + str(self.dims) + ', nk = ' + str(kwargs['nk']) + ', Constant of ' + str(kwargs['const'])
+
+
+        
+        data = np.zeros(self.dims, dtype=kwargs['dtype'])
+        data += kwargs['const']
+        
+        
+        fname = kwargs['input_dir'] + '/%s.%.2i' %(kwargs['fieldname'], kwargs['nk'])
+        
+        ic_readme_fname = self.inputs_dir + '/readme.md'
+        from datetime import datetime
+            
+        with open(ic_readme_fname, "a+") as f:
+            f.write(datetime.today().strftime('%Y-%m-%d'))
+            f.write('Update %s\n' % fname)
+            f.write(kwargs['readme_text'] + '\n')
+        
+        return write_array_to_file(fname, data, gen_fig=False, **kwargs)
     
     def source_sameasic(self,):
         import shutil            
         ic_files = [filename for filename in os.listdir(self.inputs_dir) if filename.startswith("theta")]
-        new_fname = ['./source.'+fname.split('.')[-1] for fname in ic_files]
+        new_fname = ['/source.'+fname.split('.')[-1] for fname in ic_files]
         [shutil.copyfile(self.inputs_dir+ '/' + ic_files[ind], self.inputs_dir+name) for ind, name in enumerate(new_fname)]
         return new_fname
         
+    # [Working On]
+    def adjoint_ratio(self,):
+        
+        
         
 if __name__ == "__main__":
-    result_dir = '/home/zyou6474/tasks/channel_flow'
-    dims = (128, 128, 64)
-    domain = (2*np.pi, np.pi, 1)
+    root_dir = '/home/zyou6474/tasks/channel_flow'
+    dims = [128, 128, 64]
+    domain = [2*np.pi, np.pi, 1]
 
-    ldata = lesgo_data(domain, dims, result_dir, ntheta=3)
+    self = lesgo_data(domain, dims, root_dir, ntheta=3)
 
+    self.read_data(1)
+    self.data['theta'].shape
 
-    ldata.read_data(1)
-    ldata.data['theta'].shape
+    sx = (4/3*np.pi, 4/3*np.pi, 4/3*np.pi)
+    sy = (1/2*np.pi, 1/2*np.pi, 1/2*np.pi)
+    sz = (1/4, 2/4, 3/4)
+
+    sensor_locs = (sx, sy, sz)
+    tt = np.arange(0, 50, 1)
+    self.sensor_measurements(sensor_locs, tt)

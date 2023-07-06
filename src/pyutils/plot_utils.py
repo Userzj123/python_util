@@ -33,6 +33,43 @@ def generate_gif(timestep, ldata, fig_dir, var, k, marker, **fig_args):
         os.remove(filename)
     return 
 
+def general_gif(tt, plt_func, pltfunc_args, **kwargs):
+    import os
+    import imageio
+    
+    defaultKwargs = {
+        'gif_fname' : './result.gif' 
+    }
+
+    kwargs = { **defaultKwargs, **kwargs }
+    
+    
+    gif_dir = './tmp_gif'
+    if not os.path.exists(gif_dir):
+        os.makedirs(gif_dir)
+    filenames = []
+    for it in tt:
+        pltfunc_args['lesgo_data'].read_data(it)
+        fig, ax = plt_func(**pltfunc_args)
+        
+        # create file name and append it to a list
+        filename = gif_dir + f'/%.5i.png' % it
+        filenames.append(filename)
+        
+        # save frame
+        fig.savefig(filename, bbox_inches='tight')
+        plt.close()
+    # build gif
+    with imageio.get_writer(kwargs['gif_fname'], mode='I') as writer:
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+            
+    # Remove files
+    for filename in set(filenames):
+        os.remove(filename)
+    return 
+
 
 def contour_single(coords, data, levs=61, eshrink=5/6, **fig_kw):
     """
@@ -57,7 +94,6 @@ def contour_single(coords, data, levs=61, eshrink=5/6, **fig_kw):
     cbar = fig.colorbar(cs1, cax=cax, )
     cbar.set_ticks(levels[::15])
     return fig, ax
-
 
 def contour_channel(coords, data, **kwargs):
     """
