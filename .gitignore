@@ -7,3 +7,5 @@ inputs/theta.00000000
 build/
 dist/
 src/python_utils.egg-info/
+
+test/*.gif

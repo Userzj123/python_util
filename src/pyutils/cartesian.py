@@ -1,5 +1,6 @@
 import numpy as np
 
+str_func = lambda Lz, z, str_factor: Lz*(1+(np.tanh(str_factor*(z/Lz-1))/np.tanh(str_factor)))
 
 def coords_xyz(domain, dims, stretch=False, str_factor=1.5, center=False):
     # Define the range and number of points in each direction

@@ -113,8 +113,8 @@ def contour_channel(coords, data, **kwargs):
         
     defaultKwargs = {
         'alpha' : 0.1,
-        'vmin' : round(data.min(), 1),
-        'vmax' : round(data.max(), 1),
+        'vmin' : data.min(),
+        'vmax' : data.max(),
         'cmap' : cm.Oranges,
         'levels': 101
     }
