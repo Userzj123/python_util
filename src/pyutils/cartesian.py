@@ -34,13 +34,15 @@ def coords_xyz(domain, dims, stretch=False, str_factor=1.5, center=False):
 
 
 class meshgrid():
-    def __init__(self, **kwargs):
+    def __init__(self, domain, shape):
         
-        defaultKwargs = {'domain': (2*np.pi, np.pi, 1), 'dims': (128, 128, 64) }
-        kwargs = { **defaultKwargs, **kwargs }
+        self.domain = domain
+        self.shape = shape
         
-        self.coords = coords_xyz(kwargs['domain'], kwargs['dims'])
+        
+        self.coords = coords_xyz(domain, shape)
         self.dx = self.coords[0][1] - self.coords[0][0]
+
         
     def cartesian2index(self, points):
         px, py, pz = points
