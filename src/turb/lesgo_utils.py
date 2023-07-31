@@ -347,17 +347,18 @@ class lesgo_data():
         return
     
     def read_debug(self, t_ind):
+        self.test_dir = self.output_dir + '/test'
         self.debug_advection_scalar(t_ind)
         self.debug_diffusion_scalar(t_ind)
         
         return
 
     def debug_advection_scalar(self, t_ind):
-        adv_f = self.output_dir + r'/advection.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        adv_f = self.test_dir + r'/advection.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
-        dTdx_f = self.output_dir + r'/dTdx.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        dTdy_f = self.output_dir + r'/dTdy.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        dTdz_f = self.output_dir + r'/dTdz.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        dTdx_f = self.test_dir + r'/dTdx.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        dTdy_f = self.test_dir + r'/dTdy.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        dTdz_f = self.test_dir + r'/dTdz.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
         self.data['adv'] = self._read_multi_scalar(adv_f, t_ind, self.dims)
 
@@ -368,15 +369,15 @@ class lesgo_data():
         return
 
     def debug_diffusion_scalar(self, t_ind):
-        diff_f = self.output_dir + r'/diffusion.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        diff_f = self.test_dir + r'/diffusion.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
-        u_ihalf_f = self.output_dir + r'/u_ihalf.' + self.fmt_kwargs['fmt_tstep']
-        v_jhalf_f = self.output_dir + r'/v_jhalf.' + self.fmt_kwargs['fmt_tstep']
-        w_kw_f = self.output_dir + r'/w_kw.' + self.fmt_kwargs['fmt_tstep']
+        u_ihalf_f = self.test_dir + r'/u_ihalf.' + self.fmt_kwargs['fmt_tstep']
+        v_jhalf_f = self.test_dir + r'/v_jhalf.' + self.fmt_kwargs['fmt_tstep']
+        w_kw_f = self.test_dir + r'/w_kw.' + self.fmt_kwargs['fmt_tstep']
         
-        theta_ihalf_f = self.output_dir + r'/theta_ihalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        theta_jhalf_f = self.output_dir + r'/theta_jhalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        theta_kw_f = self.output_dir + r'/theta_kw.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        theta_ihalf_f = self.test_dir + r'/theta_ihalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        theta_jhalf_f = self.test_dir + r'/theta_jhalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
+        theta_kw_f = self.test_dir + r'/theta_kw.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
         
         self.data["diff"] = self._read_multi_scalar(diff_f, t_ind, self.dims)
         
