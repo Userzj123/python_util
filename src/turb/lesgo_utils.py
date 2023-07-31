@@ -222,10 +222,11 @@ class lesgo_data():
             data = np.concatenate((data, read_array_from_file(data_f % (k+1, t_ind), dims)[np.newaxis, :, :, :]))
         return data
     
-    def read_scalar(self, t_ind, threshold=1e-5):
+    def read_scalar(self, t_ind, threshold=None):
         thetas = self._read_multi_scalar(self.theta_f, t_ind, self.dims)
         
-        thetas[thetas<threshold] = 0
+        if threshold != None:
+            thetas[thetas<threshold] = 0
         
         self.data['theta'] = thetas
         return thetas
@@ -264,11 +265,11 @@ class lesgo_data():
         write_array_to_file(self.inputs_dir + '/w_velocity.IC', self.data['w_ic'])
         
         # Scalar Initial Conditions
-        self.ntheta = self.data['theta_ic'].shape[0]
+        self.ntheta = self.data['theta_IC'].shape[0]
         self.config['SCALAR']['ntheta'] = (self.fmt_kwargs['fmt_ntheta']) % self.ntheta
         thetaic_f = self.inputs_dir + '/theta.' + self.fmt_kwargs['fmt_ntheta'] + '.IC'
         for nk in range(self.ntheta):
-            write_array_to_file(thetaic_f % (nk+1), self.data['theta_ic'][nk])
+            write_array_to_file(thetaic_f % (nk+1), self.data['theta_IC'][nk])
             
         # Source
         if self.config['SCALAR']['source_opt'] == '1':
@@ -280,6 +281,14 @@ class lesgo_data():
                     write_array_to_file(source_f % (nk+1), self.data['source'][nk])
             
         # LESGO.CONF
+        ## Update shape of domain 
+        self.config['DOMAIN']['nx'] = f'{self.dims[0]}'
+        self.config['DOMAIN']['ny'] = f'{self.dims[1]}'
+        self.config['DOMAIN']['nz'] = f'{self.dims[2]}'
+        self.config['DOMAIN']['lx'] = f'{self.domain[0]}'
+        self.config['DOMAIN']['ly'] = f'{self.domain[1]}'
+        self.config['DOMAIN']['lz'] = f'{self.domain[2]}'
+        ## Write lesgo.conf
         write_lesgoconf(self.inputs_dir + '/lesgo.conf', self.config)
         
         return 

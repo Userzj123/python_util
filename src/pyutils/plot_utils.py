@@ -113,14 +113,12 @@ def contour_channel(coords, data, **kwargs):
         
     defaultKwargs = {
         'alpha' : 0.1,
-        'vmin' : data.min(),
-        'vmax' : data.max(),
         'cmap' : cm.pink_r,
         'tick_fmt' : '%.1f',
         'figsize' : (8, 8),
         'levels': 101,
         'clip'  : False,
-        'norm'  : colors.Normalize,
+        'norm'  : colors.Normalize(data.min(), data.max()),
         'cbar_label' : 'theta'
     }
     
@@ -147,7 +145,7 @@ def contour_channel(coords, data, **kwargs):
     ax1.vlines(x_coords[x_ind], y_coords.min(), y_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     ax1.hlines(y_coords[y_ind], x_coords.min(), x_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     images.append(ax1.contourf(x_coords, y_coords, data[:, :, z_ind].T, levels=kwargs['levels'],
-                    norm=kwargs['norm'](vmin=kwargs['vmin'], vmax=kwargs['vmax'], clip=kwargs['clip']), cmap=kwargs['cmap'], extend='both'))
+                    norm=kwargs['norm'], cmap=kwargs['cmap'], extend='both'))
     ax1.set_xlabel('x')
     ax1.set_ylabel('y')
     ax1.set_aspect('equal', 'box')
@@ -157,7 +155,7 @@ def contour_channel(coords, data, **kwargs):
     ax2.vlines(x_coords[x_ind], z_coords.min(), z_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     ax2.hlines(z_coords[z_ind], x_coords.min(), x_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     images.append(ax2.contourf(x_coords, z_coords, data[:, y_ind, :].T, levels=kwargs['levels'],
-                    norm=kwargs['norm'](vmin=kwargs['vmin'], vmax=kwargs['vmax'], clip=kwargs['clip']), cmap=kwargs['cmap'], extend='both'))
+                    norm=kwargs['norm'], cmap=kwargs['cmap'], extend='both'))
     ax2.set_xlabel('x')
     ax2.set_ylabel('z')
     ax2.set_aspect('equal', 'box')
@@ -167,7 +165,7 @@ def contour_channel(coords, data, **kwargs):
     ax3.vlines(y_coords[y_ind], z_coords.min(), z_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     ax3.hlines(z_coords[z_ind], y_coords.min(), y_coords.max(), color='navy', linestyles='dashdot', alpha=kwargs['alpha'])
     images.append(ax3.contourf(y_coords, z_coords, data[x_ind, :, :].T, levels=kwargs['levels'],
-                    norm=kwargs['norm'](vmin=kwargs['vmin'], vmax=kwargs['vmax'], clip=kwargs['clip']), cmap=kwargs['cmap'], extend='both'))
+                    norm=kwargs['norm'], cmap=kwargs['cmap'], extend='both'))
     ax3.set_xlabel('y')
     ax3.set_ylabel('z')
     ax3.set_aspect('equal', 'box')
@@ -177,7 +175,7 @@ def contour_channel(coords, data, **kwargs):
 
     cax = plt.axes([1.05, 0.11, 0.025, 0.78])
     cbar = fig.colorbar(
-            cm.ScalarMappable(norm=kwargs['norm'](vmin=kwargs['vmin'], vmax=kwargs['vmax'], clip=kwargs['clip']), cmap=kwargs['cmap']),
+            cm.ScalarMappable(norm=kwargs['norm'], cmap=kwargs['cmap']),
             extend='both', cax = cax,
                             )
 
