@@ -1,146 +1,156 @@
-from dash import Dash, html, dcc, Input, Output, callback
-import pandas as pd
-import plotly.express as px
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+import numpy as np
+from scipy import linalg
 
-app = Dash(__name__, external_stylesheets=external_stylesheets)
-
-df = pd.read_csv('https://plotly.github.io/datasets/country_indicators.csv')
-
-
-app.layout = html.Div([
-    html.Div([
-
-        html.Div([
-            dcc.Dropdown(
-                df['Indicator Name'].unique(),
-                'Fertility rate, total (births per woman)',
-                id='crossfilter-xaxis-column',
-            ),
-            dcc.RadioItems(
-                ['Linear', 'Log'],
-                'Linear',
-                id='crossfilter-xaxis-type',
-                labelStyle={'display': 'inline-block', 'marginTop': '5px'}
-            )
-        ],
-        style={'width': '49%', 'display': 'inline-block'}),
-
-        html.Div([
-            dcc.Dropdown(
-                df['Indicator Name'].unique(),
-                'Life expectancy at birth, total (years)',
-                id='crossfilter-yaxis-column'
-            ),
-            dcc.RadioItems(
-                ['Linear', 'Log'],
-                'Linear',
-                id='crossfilter-yaxis-type',
-                labelStyle={'display': 'inline-block', 'marginTop': '5px'}
-            )
-        ], style={'width': '49%', 'float': 'right', 'display': 'inline-block'})
-    ], style={
-        'padding': '10px 5px'
-    }),
-
-    html.Div([
-        dcc.Graph(
-            id='crossfilter-indicator-scatter',
-            hoverData={'points': [{'customdata': 'Japan'}]}
-        )
-    ], style={'width': '49%', 'display': 'inline-block', 'padding': '0 20'}),
-    html.Div([
-        dcc.Graph(id='x-time-series'),
-        dcc.Graph(id='y-time-series'),
-    ], style={'display': 'inline-block', 'width': '49%'}),
-
-    html.Div(dcc.Slider(
-        df['Year'].min(),
-        df['Year'].max(),
-        step=None,
-        id='crossfilter-year--slider',
-        value=df['Year'].max(),
-        marks={str(year): str(year) for year in df['Year'].unique()}
-    ), style={'width': '49%', 'padding': '0px 20px 20px 20px'})
-])
-
-
-@callback(
-    Output('crossfilter-indicator-scatter', 'figure'),
-    Input('crossfilter-xaxis-column', 'value'),
-    Input('crossfilter-yaxis-column', 'value'),
-    Input('crossfilter-xaxis-type', 'value'),
-    Input('crossfilter-yaxis-type', 'value'),
-    Input('crossfilter-year--slider', 'value'))
-def update_graph(xaxis_column_name, yaxis_column_name,
-                 xaxis_type, yaxis_type,
-                 year_value):
-    dff = df[df['Year'] == year_value]
-
-    fig = px.scatter(x=dff[dff['Indicator Name'] == xaxis_column_name]['Value'],
-            y=dff[dff['Indicator Name'] == yaxis_column_name]['Value'],
-            hover_name=dff[dff['Indicator Name'] == yaxis_column_name]['Country Name']
-            )
-
-    fig.update_traces(customdata=dff[dff['Indicator Name'] == yaxis_column_name]['Country Name'])
-
-    fig.update_xaxes(title=xaxis_column_name, type='linear' if xaxis_type == 'Linear' else 'log')
-
-    fig.update_yaxes(title=yaxis_column_name, type='linear' if yaxis_type == 'Linear' else 'log')
-
-    fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')
-
-    return fig
-
-
-def create_time_series(dff, axis_type, title):
-
-    fig = px.scatter(dff, x='Year', y='Value')
-
-    fig.update_traces(mode='lines+markers')
-
-    fig.update_xaxes(showgrid=False)
-
-    fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log')
-
-    fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
-                       xref='paper', yref='paper', showarrow=False, align='left',
-                       text=title)
-
-    fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
-
-    return fig
-
-
-@callback(
-    Output('x-time-series', 'figure'),
-    Input('crossfilter-indicator-scatter', 'hoverData'),
-    Input('crossfilter-xaxis-column', 'value'),
-    Input('crossfilter-xaxis-type', 'value'))
-def update_y_timeseries(hoverData, xaxis_column_name, axis_type):
-    country_name = hoverData['points'][0]['customdata']
-    dff = df[df['Country Name'] == country_name]
-    dff = dff[dff['Indicator Name'] == xaxis_column_name]
-    title = '<b>{}</b><br>{}'.format(country_name, xaxis_column_name)
-    return create_time_series(dff, axis_type, title)
-
-
-@callback(
-    Output('y-time-series', 'figure'),
-    Input('crossfilter-indicator-scatter', 'hoverData'),
-    Input('crossfilter-yaxis-column', 'value'),
-    Input('crossfilter-yaxis-type', 'value'))
-def update_x_timeseries(hoverData, yaxis_column_name, axis_type):
-    dff = df[df['Country Name'] == hoverData['points'][0]['customdata']]
-    dff = dff[dff['Indicator Name'] == yaxis_column_name]
-    return create_time_series(dff, axis_type, yaxis_column_name)
 
 class lst():
-    def __init__(self,):
+    def __init__(self, N:int, bf:int) -> None:
+        """Initialize the LST Analysis
+
+        Args:
+            N (int): number of Chebyshev polynomials
+            bf (int): set = 1 for Couette, 2 for Poiseuille, 3 for quiescent
+            
+        Returns:
+
+        """
+        # Input parameters 
+        self.N = N          # number of Chebyshev polynomials
+
+        R  = 180         # Reynolds number
+        kx = 0.5           # streamwise wavenumber
+        kz = 0           # spanwise wavenumber
+        Ri = 0.0        # Richardson number
+        Pr = 0.71        # Prantl number
+        Ra = 8*R*R/Pr*Ri # Rayleigh number
+        print('Rayleigh number is '+ str(Ra))
+
+        bf = 2   # 
+        
+        
+        # Set up grid and differentiation matrices
+        self.y_phys                = np.cos(np.linspace(0, np.pi, N))[:, np.newaxis]   # Generate Chebyshev grid for base flow solver
+        D0,D1,D2,D3,D4 = self.dmat(N)   # Chebyshev polynomials and derivatives at the Gauss points
+        
+        # Find the base flow
+        [U,Up,Upp,T,Tp] = self.bounded_base(self.y_phys,N,bf)
+
+
+        # Find eigenvalues of stability operators
+        self.A, self.B = self.Operator(kx,kz,R,Pr,Ri,U,Up,Upp,Tp,D0,D1,D2,D4)
+
+        self.omega, self.q = self.solve_eig(self.A, self.B)
+
         return
     
+    def solve_eig(self, A, B):
+        # find eigenvalues
+        omega, q = linalg.eig(A, B)
+
+        omega = 1j*omega   # eigenvalues omega in vector form
+
+        # remove bad eigenvalues
+        sp = np.logical_and(abs(omega)>1e-10, abs(omega)<50)
+
+        omega = omega[sp]
+        q = q[:, sp]
+        return omega, q
     
     
-if __name__ == '__main__':
-    app.run(debug=True)
+    def dmat(self, N):
+        D0 = np.cos(np.pi / (N-1) * np.arange(N)[np.newaxis, :] * np.arange(N)[:, np.newaxis])
+        
+        D1 = np.concatenate((np.zeros(shape=(N, 1)), D0[:, 0][:, np.newaxis], 4*D0[:, 1][:, np.newaxis]), axis=1)
+        D2 = np.concatenate((np.zeros(shape=(N, 2)), 4*D0[:, 1][:, np.newaxis]), axis=1)
+        D3 = np.zeros(shape=(N, 3))
+        D4 = np.zeros(shape=(N, 3))
+
+
+
+        # create higher derivative matrices
+        for j in range(2, N-1):
+            
+            D1= np.concatenate((D1, 2*j*D0[:, j][:, np.newaxis]+j*D1[:, j-1][:, np.newaxis]/(j-1)), axis=1)
+            D2= np.concatenate((D2, 2*j*D1[:, j][:, np.newaxis]+j*D2[:, j-1][:, np.newaxis]/(j-1)), axis=1)
+            D3= np.concatenate((D3, 2*j*D2[:, j][:, np.newaxis]+j*D3[:, j-1][:, np.newaxis]/(j-1)), axis=1)
+            D4= np.concatenate((D4, 2*j*D3[:, j][:, np.newaxis]+j*D4[:, j-1][:, np.newaxis]/(j-1)), axis=1)
+            
+        return D0, D1, D2, D3, D4
+    
+    def bounded_base(self, y_phys,N,bf):
+        if bf == 1: # Couette flow
+    
+            U   = y_phys
+            Up  = np.ones(shape=(N, 1))
+            Upp = np.zeros(shape=(N, 1))
+            T   = y_phys
+            Tp  = np.zeros(shape=(N, 1))
+            
+        elif bf == 2 : # Poiseuille flow
+            
+            U   = (1 - y_phys**2)
+            Up  = -2*y_phys
+            Upp = -2*np.ones(shape=(N, 1))
+            T   = np.zeros(shape=(N, 1))
+            Tp  = np.zeros(shape=(N, 1))
+            
+        elif bf == 3: # quiescent flow
+            
+            U   = np.zeros(shape=(N, 1))
+            Up  = np.zeros(shape=(N, 1))
+            Upp = np.zeros(shape=(N, 1))
+            T   = y_phys
+            Tp  = np.ones(shape=(N, 1))
+        else:
+            print('Need to select bf = 1 or 2')
+            
+            
+        return U,Up,Upp,T,Tp
+    
+    def Operator(self, kx,kz,R,Pr,Ri,U,Up,Upp,Tp,D0,D1,D2,D4):
+        # Useful variables --------------------------------------------------------
+        k2 = kx**2 + kz**2       # wavenumber^2
+        N  = U.shape[0]
+        M  =  np.ones(shape=(1, N)) # matrix for mean flow variables 
+        er = -200*1j           # for spurious eigenvalues from BCs
+
+        LSQ = -1j*kx*(U*M)*D0 + (1/R)*(D2-k2*D0)
+        LOS = -1j*kx*(U*M)*(D2-k2*D0) + 1j*kx*(Upp*M)*D0 + (1/R)*(D4-(2*k2*D2)+((k2**2)*D0))
+        A32 = -1j*kx*(U*M)*D0 + (1/R/Pr)*(D2-k2*D0)
+        
+        A = np.block([[LOS, np.zeros((N, N)), -Ri*k2*D0],[-1j*kz*(Up*M*D0) , LSQ, np.zeros((N, N))],[-(Tp*M*D0), np.zeros((N, N)), A32]])
+
+        B = np.block([[D2-k2*D0, np.zeros((N, N)), np.zeros((N, N))], [np.zeros((N, N)), D0, np.zeros((N, N))], [np.zeros((N, N)),  np.zeros((N, N)), D0]])
+
+        B[0, 0:N] = D0[0, :]
+        B[1, 0:N, ] = D1[0, :] # v, Dv at y = top
+        B[N-2, 0:N] = D1[N-1, :]
+        B[N-1, 0:N] = D0[N-1, :] # v, Dv at y = bot
+
+        # apply boundary condtions to top and bottom 2 rows (i.e. v = Dv = 0)
+        A[0, 0:N] = er*D0[0, :]       # vanishing in the free stream
+        A[1, 0:N] = er*D1[0, :]       # vanishing in the free stream
+        A[N-2, 0:N] = er*D1[N-1, :]   # gradient vanishing at wall (no slip)
+        A[N-1, 0:N] = er*D0[N-1, :]   # no penetration at wall
+
+        # clear the rows to apply Squire boundary conditions ----------------------
+        A[N, :] = 0
+        A[2*N-1, :] = 0
+
+        # apply Squire boundary conditions (eta = 0 at y=top,bot)
+        A[N, N:2*N, ] = er*D0[0, :]
+        A[2*N-1, N:2*N, ] = er*D0[N-1, :]
+
+        # apply temperature boundary conditions
+        A[2*N, :] = 0
+        A[3*N-1, :] = 0
+
+        A[2*N, 2*N:3*N] = er*D0[0, :]
+        A[3*N-1, 2*N:3*N] = er*D0[N-1, :]
+        return A, B
+    
+    
+if __name__ == "__main__":
+    channel = lst(384, 2)
+    
+    print('test')
