@@ -30,14 +30,14 @@ class lst():
         
         # Set up grid and differentiation matrices
         self.y_phys                = np.cos(np.linspace(0, np.pi, N))[:, np.newaxis]   # Generate Chebyshev grid for base flow solver
-        D0,D1,D2,D3,D4 = self.dmat(N)   # Chebyshev polynomials and derivatives at the Gauss points
+        self.D0, self.D1, self.D2, self.D3, self.D4 = self.dmat(N)   # Chebyshev polynomials and derivatives at the Gauss points
         
         # Find the base flow
         [U,Up,Upp,T,Tp] = self.bounded_base(self.y_phys,N,bf)
 
 
         # Find eigenvalues of stability operators
-        self.A, self.B = self.Operator(kx,kz,R,Pr,Ri,U,Up,Upp,Tp,D0,D1,D2,D4)
+        self.A, self.B = self.Operator(kx,kz,R,Pr,Ri,U,Up,Upp,Tp,self.D0, self.D1, self.D2, self.D4)
 
         self.omega, self.q = self.solve_eig(self.A, self.B)
 
@@ -49,7 +49,8 @@ class lst():
     
     def solve_eig(self, A, B):
         # find eigenvalues
-        omega, q = linalg.eig(A, B)
+        # omega, q = linalg.eig(A, B)
+        omega, q = np.linalg.eig(np.linalg.inv(B)@A)
 
         omega = 1j*omega   # eigenvalues omega in vector form
 
@@ -62,8 +63,10 @@ class lst():
     
     
     def dmat(self, N):
-        D0 = np.cos(np.pi / (N-1) * np.arange(N)[np.newaxis, :] * np.arange(N)[:, np.newaxis])
+        num = N-1
+        D0 = np.cos(np.arange(N)[np.newaxis, :]  * np.pi * np.arange(N)[:, np.newaxis] / num )
         
+        # create higher derivative matrices
         D1 = np.concatenate((np.zeros(shape=(N, 1)), D0[:, 0][:, np.newaxis], 4*D0[:, 1][:, np.newaxis]), axis=1)
         D2 = np.concatenate((np.zeros(shape=(N, 2)), 4*D0[:, 1][:, np.newaxis]), axis=1)
         D3 = np.zeros(shape=(N, 3))
@@ -71,13 +74,11 @@ class lst():
 
 
 
-        # create higher derivative matrices
-        for j in range(2, N-1):
-            
-            D1= np.concatenate((D1, 2*j*D0[:, j][:, np.newaxis]+j*D1[:, j-1][:, np.newaxis]/(j-1)), axis=1)
-            D2= np.concatenate((D2, 2*j*D1[:, j][:, np.newaxis]+j*D2[:, j-1][:, np.newaxis]/(j-1)), axis=1)
-            D3= np.concatenate((D3, 2*j*D2[:, j][:, np.newaxis]+j*D3[:, j-1][:, np.newaxis]/(j-1)), axis=1)
-            D4= np.concatenate((D4, 2*j*D3[:, j][:, np.newaxis]+j*D4[:, j-1][:, np.newaxis]/(j-1)), axis=1)
+        for j in range(3, N):
+            D1= np.concatenate((D1, 2*j*D0[:, j-1][:, np.newaxis]+j*D1[:, j-2][:, np.newaxis]/(j-2)), axis=1)
+            D2= np.concatenate((D2, 2*j*D1[:, j-1][:, np.newaxis]+j*D2[:, j-2][:, np.newaxis]/(j-2)), axis=1)
+            D3= np.concatenate((D3, 2*j*D2[:, j-1][:, np.newaxis]+j*D3[:, j-2][:, np.newaxis]/(j-2)), axis=1)
+            D4= np.concatenate((D4, 2*j*D3[:, j-1][:, np.newaxis]+j*D4[:, j-2][:, np.newaxis]/(j-2)), axis=1)
             
         return D0, D1, D2, D3, D4
     
@@ -118,11 +119,11 @@ class lst():
         M  =  np.ones(shape=(1, N)) # matrix for mean flow variables 
         er = -200*1j           # for spurious eigenvalues from BCs
 
-        LSQ = -1j*kx*(U*M)*D0 + (1/R)*(D2-k2*D0)
-        LOS = -1j*kx*(U*M)*(D2-k2*D0) + 1j*kx*(Upp*M)*D0 + (1/R)*(D4-(2*k2*D2)+((k2**2)*D0))
-        A32 = -1j*kx*(U*M)*D0 + (1/R/Pr)*(D2-k2*D0)
+        LSQ = -1j*kx*(U@M)*D0 + (1/R)*(D2-k2*D0)
+        LOS = -1j*kx*(U@M)*(D2-k2*D0) + 1j*kx*(Upp@M)*D0 + (1/R)*(D4-(2*k2*D2)+((k2**2)*D0))
+        A32 = -1j*kx*(U@M)*D0 + (1/R/Pr)*(D2-k2*D0)
         
-        A = np.block([[LOS, np.zeros((N, N)), -Ri*k2*D0],[-1j*kz*(Up*M*D0) , LSQ, np.zeros((N, N))],[-(Tp*M*D0), np.zeros((N, N)), A32]])
+        A = np.block([[LOS, np.zeros((N, N)), -Ri*k2*D0],[-1j*kz*(Up@M*D0) , LSQ, np.zeros((N, N))],[-(Tp@M*D0), np.zeros((N, N)), A32]])
 
         B = np.block([[D2-k2*D0, np.zeros((N, N)), np.zeros((N, N))], [np.zeros((N, N)), D0, np.zeros((N, N))], [np.zeros((N, N)),  np.zeros((N, N)), D0]])
 
