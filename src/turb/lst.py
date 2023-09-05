@@ -18,7 +18,7 @@ class lst():
         self.N = N          # number of Chebyshev polynomials
 
         R  = 180         # Reynolds number
-        kx = 0.5           # streamwise wavenumber
+        kx = 1           # streamwise wavenumber
         kz = 0           # spanwise wavenumber
         Ri = 0.0        # Richardson number
         Pr = 0.71        # Prantl number
