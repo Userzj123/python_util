@@ -41,6 +41,10 @@ class lst():
 
         self.omega, self.q = self.solve_eig(self.A, self.B)
 
+        # [WorkingOn]
+        # # Find fields in physical space
+        # [u,v,w,eta] = vel_field(kx,kz,D0p,D1p,q,N)
+        # Temperature = D0p*q(2*N+1:3*N,:)
         return
     
     def solve_eig(self, A, B):
