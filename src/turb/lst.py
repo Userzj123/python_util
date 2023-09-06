@@ -112,6 +112,48 @@ class lst():
             
         return U,Up,Upp,T,Tp
     
+    # def Operator(self, kx,kz,R,Pr,Ri,U,Up,Upp,Tp,D0,D1,D2,D4):
+    #     # Useful variables --------------------------------------------------------
+    #     k2 = kx**2 + kz**2       # wavenumber^2
+    #     N  = U.shape[0]
+    #     M  =  np.ones(shape=(1, N)) # matrix for mean flow variables 
+    #     er = -200*1j           # for spurious eigenvalues from BCs
+
+    #     LSQ = -1j*kx*(U@M)*D0 + (1/R)*(D2-k2*D0)
+    #     LOS = -1j*kx*(U@M)*(D2-k2*D0) + 1j*kx*(Upp@M)*D0 + (1/R)*(D4-(2*k2*D2)+((k2**2)*D0))
+    #     A32 = -1j*kx*(U@M)*D0 + (1/R/Pr)*(D2-k2*D0)
+        
+    #     A = np.block([[LOS, np.zeros((N, N)), -Ri*k2*D0],[-1j*kz*(Up@M*D0) , LSQ, np.zeros((N, N))],[-(Tp@M*D0), np.zeros((N, N)), A32]])
+
+    #     B = np.block([[D2-k2*D0, np.zeros((N, N)), np.zeros((N, N))], [np.zeros((N, N)), D0, np.zeros((N, N))], [np.zeros((N, N)),  np.zeros((N, N)), D0]])
+
+    #     B[0, 0:N] = D0[0, :]
+    #     B[1, 0:N, ] = D1[0, :] # v, Dv at y = top
+    #     B[N-2, 0:N] = D1[N-1, :]
+    #     B[N-1, 0:N] = D0[N-1, :] # v, Dv at y = bot
+
+    #     # apply boundary condtions to top and bottom 2 rows (i.e. v = Dv = 0)
+    #     A[0, 0:N] = er*D0[0, :]       # vanishing in the free stream
+    #     A[1, 0:N] = er*D1[0, :]       # vanishing in the free stream
+    #     A[N-2, 0:N] = er*D1[N-1, :]   # gradient vanishing at wall (no slip)
+    #     A[N-1, 0:N] = er*D0[N-1, :]   # no penetration at wall
+
+    #     # clear the rows to apply Squire boundary conditions ----------------------
+    #     A[N, :] = 0
+    #     A[2*N-1, :] = 0
+
+    #     # apply Squire boundary conditions (eta = 0 at y=top,bot)
+    #     A[N, N:2*N, ] = er*D0[0, :]
+    #     A[2*N-1, N:2*N, ] = er*D0[N-1, :]
+
+    #     # apply temperature boundary conditions
+    #     A[2*N, :] = 0
+    #     A[3*N-1, :] = 0
+
+    #     A[2*N, 2*N:3*N] = er*D0[0, :]
+    #     A[3*N-1, 2*N:3*N] = er*D0[N-1, :]
+    #     return A, B
+    
     def Operator(self, kx,kz,R,Pr,Ri,U,Up,Upp,Tp,D0,D1,D2,D4):
         # Useful variables --------------------------------------------------------
         k2 = kx**2 + kz**2       # wavenumber^2
@@ -119,39 +161,14 @@ class lst():
         M  =  np.ones(shape=(1, N)) # matrix for mean flow variables 
         er = -200*1j           # for spurious eigenvalues from BCs
 
-        LSQ = -1j*kx*(U@M)*D0 + (1/R)*(D2-k2*D0)
-        LOS = -1j*kx*(U@M)*(D2-k2*D0) + 1j*kx*(Upp@M)*D0 + (1/R)*(D4-(2*k2*D2)+((k2**2)*D0))
         A32 = -1j*kx*(U@M)*D0 + (1/R/Pr)*(D2-k2*D0)
         
-        A = np.block([[LOS, np.zeros((N, N)), -Ri*k2*D0],[-1j*kz*(Up@M*D0) , LSQ, np.zeros((N, N))],[-(Tp@M*D0), np.zeros((N, N)), A32]])
+        A = A32
 
-        B = np.block([[D2-k2*D0, np.zeros((N, N)), np.zeros((N, N))], [np.zeros((N, N)), D0, np.zeros((N, N))], [np.zeros((N, N)),  np.zeros((N, N)), D0]])
+        B = D0
 
-        B[0, 0:N] = D0[0, :]
-        B[1, 0:N, ] = D1[0, :] # v, Dv at y = top
-        B[N-2, 0:N] = D1[N-1, :]
-        B[N-1, 0:N] = D0[N-1, :] # v, Dv at y = bot
-
-        # apply boundary condtions to top and bottom 2 rows (i.e. v = Dv = 0)
-        A[0, 0:N] = er*D0[0, :]       # vanishing in the free stream
-        A[1, 0:N] = er*D1[0, :]       # vanishing in the free stream
-        A[N-2, 0:N] = er*D1[N-1, :]   # gradient vanishing at wall (no slip)
-        A[N-1, 0:N] = er*D0[N-1, :]   # no penetration at wall
-
-        # clear the rows to apply Squire boundary conditions ----------------------
-        A[N, :] = 0
-        A[2*N-1, :] = 0
-
-        # apply Squire boundary conditions (eta = 0 at y=top,bot)
-        A[N, N:2*N, ] = er*D0[0, :]
-        A[2*N-1, N:2*N, ] = er*D0[N-1, :]
-
-        # apply temperature boundary conditions
-        A[2*N, :] = 0
-        A[3*N-1, :] = 0
-
-        A[2*N, 2*N:3*N] = er*D0[0, :]
-        A[3*N-1, 2*N:3*N] = er*D0[N-1, :]
+        A[0, :] = er*D0[0, :]
+        A[-1, :] = er*D0[N-1, :]
         return A, B
     
     
