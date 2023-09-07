@@ -158,7 +158,7 @@ class lesgo_data():
     
     """
     
-    def __init__(self, domain, dims, forward_dir, ntheta=1) -> None:
+    def __init__(self, domain, dims, forward_dir, ntheta=1, center=True, stretch=True) -> None:
         self.forward_dir = forward_dir
         if not os.path.exists(forward_dir):
             os.makedirs(forward_dir)
@@ -173,7 +173,7 @@ class lesgo_data():
         self.forward_output_dir = forward_dir + '/output'
         self.output_dir = self.forward_output_dir
         
-        self.coords = coords_xyz(domain, dims, center=True, stretch=True)
+        self.coords = coords_xyz(domain, dims, center=center, stretch=stretch)
         self.domain = domain
         self.dims = dims
         self.ntheta : np.int64 = ntheta
