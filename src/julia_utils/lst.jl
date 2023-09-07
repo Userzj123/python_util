@@ -1,6 +1,5 @@
 using MAT, LinearAlgebra
-using Dash, Plots, DataFrames
-plotlyjs()
+using Dash, PlotlyJS, DataFrames
 
 N = 384
 
@@ -13,7 +12,7 @@ scalar_eigvecs = eigvecs(inv(lst_vars["B"]) * lst_vars["A"] )
 scalar_sp = (abs.(scalar_eigvals).>1e-10) .*  (abs.(scalar_eigvals).<50)
 
 scalar_eigvals = scalar_eigvals[scalar_sp]
-scalar_eigvecs = scalar_eigvecs[:, scalar_sp];
+scalar_eigvecs = lst_vars["D0p"] * scalar_eigvecs[:, scalar_sp]
 
 
 df = DataFrame(
@@ -55,7 +54,7 @@ app.layout = html_div() do
             children = [
                 dcc_graph(
                     id="eigenvals_plot",
-                    clickData=Dict("points"=> [Dict("pointNumber"=> 0)])
+                    clickData=Dict("points"=> [Dict("pointNumber"=> 1)])
                 ),
             ], 
             style=(width = "48%", display = "inline-block", padding = "0 20"),
@@ -78,7 +77,8 @@ callback!(
     Output("eigenvals_plot", "figure"),
     Input("layer_number", "value")
 ) do layer_number
-    fig = scatter(x=real(df["eigvals"]), y = imag(df["eigvals"]), hover_name=df["eig_ind"])
+    fig = plot(scatter(x=real(df.eigvals), y = imag(df.eigvals), mode="markers"))
+    
     return fig
 end
 
@@ -90,9 +90,9 @@ callback!(
     Input("layer_number", "value")
 ) do clickData, layer_number
     y_phys = cos.(LinRange(0, pi, layer_number))
-    eig_ind = clickData["points"][0]["pointNumber"]
+    eig_ind = clickData["points"][1]["pointNumber"]
     print(eig_ind)
-    fig = plot(x= y_phys, y= abs.(df["eigvecs"][eig_ind]))
+    fig = plot(y_phys, abs.(df.eigvecs[eig_ind]))
     return fig, eig_ind
 end
 
