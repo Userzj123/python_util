@@ -2,7 +2,7 @@ module params
 
 using TOML
 
-export varprec, vartype, boundaries, configs
+export varprec, vartype, boundaries, configs, read_conf
 
 const varprec = Float64
 const vartype = Union{Array{varprec, 3}, Array{varprec, 4}}

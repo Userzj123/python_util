@@ -1,11 +1,11 @@
-include("./mesh.jl")
-using .mesh
-using TOML
+using LinearAlgebra
+using FFTW
 
-domain = [2*pi, pi, 1]
-dims = [16, 16, 128]
+x = LinRange(-pi, pi, 16)[1:end-1]
+y = LinRange(-1, 1, 16)
 
-coord= init_mesh(domain, dims)
+xx = x .+ y'.*0
 
+xx2 = x' .+ y.*0
 
-config = TOML.parsefile("/home/zejiany/Documents/Projects/python_util/src/julia_cfd/data/cfd.conf")
+fft(sin.(xx), 2)

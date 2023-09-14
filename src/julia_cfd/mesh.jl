@@ -1,6 +1,6 @@
-module mesh
+module topology
 
-export coordinates, init_mesh, meshgrid
+export coordinates, generate_coords, generate_meshgrid
 
 struct coordinates
     x :: Vector
@@ -15,15 +15,21 @@ struct surface
 end
 
 struct meshgrid
-    ijk :: coordinates
-    ijkk :: coordinates
+    xx :: Array{Float64, 3}
+    yy :: Array{Float64, 3}
+    zz :: Array{Float64, 3}
+end
+
+struct mdata
+    ijk :: meshgrid
+    ijkk :: meshgrid
 
     S :: surface
     V :: Array
 end
 
 
-function generate_coords(domain, dims; center=false, stretch=false, str_factor=1.5)
+function generate_coords(domain, dims; center=false, stretch=false, str_factor=1.5)::coordinates
 
     if center
         # Generate 1D arrays of x, y, and z coordinates
@@ -56,7 +62,15 @@ function generate_coords(domain, dims; center=false, stretch=false, str_factor=1
 end
 
 
-function generate_meshgrid(domain, dims)::meshgrid
+function generate_meshgrid(coord::coordinates)::meshgrid
+    x = reshape(coord.x, (length(coord.x), 1, 1))
+    y = reshape(coord.y, (1, length(coord.y), 1))
+    z = reshape(coord.z, (1, 1, length(coord.z)))
+
+    xx = repeat(x, 1, length(y), length(z))
+    yy = repeat(y, length(x), 1, length(z))
+    zz = repeat(z, length(x), length(y), 1)
+    return meshgrid(xx, yy, zz)
 end
 
 end

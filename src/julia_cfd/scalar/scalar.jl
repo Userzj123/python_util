@@ -1,11 +1,11 @@
 module scalar
 
-include("./mesh.jl")
-include("./params.jl")
+include("../mesh.jl")
+include("../params.jl")
 using .mesh
 using .params
 
-export scalar_forward!
+export vars, velocity_vars, scalar_vars
 
 
 struct scalar_vars
@@ -154,6 +154,20 @@ end
         end
 
         return f_jj
+    end
+
+
+
+
+    function cn_diff_stag_array(u, v, w, theta, RHS)
+        RHS = input.scalar.RHS
+        theta = input.scalar.theta
+        u = input.velocity.u
+        v = input.velocity.v
+        w = input.velocity.w
+
+
+        
     end
 
 
