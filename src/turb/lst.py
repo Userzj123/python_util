@@ -68,7 +68,7 @@ class lst():
         
         # create higher derivative matrices
         D1 = np.concatenate((np.zeros(shape=(N, 1)), D0[:, 0][:, np.newaxis], 4*D0[:, 1][:, np.newaxis]), axis=1)
-        D2 = np.concatenate((np.zeros(shape=(N, 2)), 4*D0[:, 1][:, np.newaxis]), axis=1)
+        D2 = np.concatenate((np.zeros(shape=(N, 2)),                          4*D1[:, 1][:, np.newaxis]), axis=1)
         D3 = np.zeros(shape=(N, 3))
         D4 = np.zeros(shape=(N, 3))
 
