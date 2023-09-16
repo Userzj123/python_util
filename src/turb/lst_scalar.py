@@ -151,8 +151,8 @@ class lst_scalar():
         )
         )
         df2["group"] = "solver"
-
-        result_y = axis
+        
+        y_set = [y_phys, axis]
         
         # Assemble
         frames = [df1, df2]
@@ -279,7 +279,7 @@ class lst_scalar():
 
             # Add traces
             for ind, cls in enumerate(df["group"].unique()):
-                    fig.add_trace(go.Scatter(x=y_phys, y=norm_eigvec(np.abs(df['eigvecs'][ind_set[ind]])), marker=marker_types[ind],
+                    fig.add_trace(go.Scatter(x=y_set[ind], y=norm_eigvec(np.abs(df['eigvecs'][ind_set[ind]])), marker=marker_types[ind],
                                         mode=mode_types[ind],
                                         name=df["group"].unique()[ind]))
                 # fig.add_trace(go.Scatter(x=result_y, y=np.abs(df['eigvecs'][result_ind]),
@@ -292,6 +292,4 @@ class lst_scalar():
 
 
             return fig, ind_set[0], ind_set[1], group1_eigvals, group2_eigvals
-        
-        app.run(debug=True)
         return app
