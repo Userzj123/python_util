@@ -287,6 +287,8 @@ class lst_scalar():
                 # fig.add_trace(go.Scatter(x=result_y, y=np.abs(df['eigvecs'][result_ind]),
                 #                     mode='lines',
                 #                     name=df["group"].unique()[1]))
+                
+            fig.update_layout(template="simple_white", height=450, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
             
             group1_eigvals = "%f + %f i" %(df['eigvals_real'][ind_set[0]], df['eigvals_imag'][ind_set[0]])
             group2_eigvals = "%f + %f i" %(df['eigvals_real'][ind_set[1]], df['eigvals_imag'][ind_set[1]])
