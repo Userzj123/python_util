@@ -109,7 +109,7 @@ class lst_scalar():
         M  =  np.ones(shape=(1, N))
         er = -200*1j 
 
-        A = -1j*kx*(U@M)@D0 + (1/R/Pr)*(D2-k2*D0)
+        A = -1j*kx*(U@M)*D0 + (1/R/Pr)*(D2-k2*D0)
         B = D0
 
 
