@@ -212,20 +212,6 @@ class lst_scalar():
             ]),
         ])
 
-        def create_eigvec_plot(y, eigvec, title):
-            fig = px.scatter(x=y, y=eigvec[-y.shape[0]:])
-            fig.update_traces(mode='lines+markers')
-
-            fig.update_xaxes(showgrid=False)
-
-            fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
-                            xref='paper', yref='paper', showarrow=False, align='left',
-                            text=title)
-
-            fig.update_layout(template="simple_white", height=450, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
-            
-            return fig
-
         @callback(
             Output('eigenvals_plot', 'figure'),
             Input('layer_number', 'value'),
