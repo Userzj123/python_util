@@ -109,7 +109,7 @@ class lst_scalar():
         M  =  np.ones(shape=(1, N))
         er = -200*1j 
 
-        A = -1j*kx*(U@M)*D0 + (1/R/Pr)*(D2-k2*D0)
+        A = -1j*kx*(U@M)@D0 + (1/R/Pr)*(D2-k2*D0)
         B = D0
 
 
@@ -222,7 +222,7 @@ class lst_scalar():
                             xref='paper', yref='paper', showarrow=False, align='left',
                             text=title)
 
-            fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
+            fig.update_layout(template="simple_white", height=450, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
             
             return fig
 
@@ -242,6 +242,8 @@ class lst_scalar():
                     fig.add_trace(go.Scatter(x=df[df["group"]==cls]["eigvals_real"], y = df[df["group"]==cls]["eigvals_imag"], hovertext=df[df["group"]==cls].index, opacity=0.5, marker=marker_types[ind],
                                         mode='markers',
                                         name=df["group"].unique()[ind]))
+            
+            fig.update_layout(template="simple_white", height=450, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
                     
             return fig
 
