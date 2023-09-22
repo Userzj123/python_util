@@ -6,6 +6,7 @@ struct coordinates
     x :: Vector
     y :: Vector
     z :: Vector
+    jaco_z :: Vector
 end
 
 struct surface
@@ -33,29 +34,35 @@ function generate_coords(domain, dims; center=false, stretch=false, str_factor=1
 
     if center
         # Generate 1D arrays of x, y, and z coordinates
-        x_coords = LinRange(0, domain[1], dims[1]+1)
-        y_coords = LinRange(0, domain[2], dims[2]+1)
-        z_coords = LinRange(0, domain[3], dims[3]+1)
+        tmp_x = LinRange(0, domain[1], dims[1]+1)
+        tmp_y = LinRange(0, domain[2], dims[2]+1)
+        tmp_z = LinRange(0, domain[3], dims[3]+1)
 
-        x_coords = 0.5 * x_coords[1:end-1] + 0.5 * x_coords[2:end]
-        y_coords = 0.5 * y_coords[1:end-1] + 0.5 * y_coords[2:end]
-        z_coords = 0.5 * z_coords[1:end-1] + 0.5 * z_coords[2:end]
+        x_coords = 0.5 * tmp_x[1:end-1] + 0.5 * tmp_x[2:end]
+        y_coords = 0.5 * tmp_y[1:end-1] + 0.5 * tmp_y[2:end]
+        z_coords = 0.5 * tmp_z[1:end-1] + 0.5 * tmp_z[2:end]
         
     else
         # Generate 1D arrays of x, y, and z coordinates
-        x_coords = LinRange(0, domain[1], dims[1])
-        y_coords = LinRange(0, domain[2], dims[2])
-        z_coords = LinRange(0, domain[3], dims[3])
+        x_coords = LinRange(0, domain[1], dims[1]+1)
+        y_coords = LinRange(0, domain[2], dims[2]+1)
+        z_coords = LinRange(0, domain[3], dims[3]+1)
     end
 
     # k(uv) grid
     if stretch
         z_stretch = domain[3] .* (1 .+(tanh.(str_factor .*(z_coords ./domain[3] .-1)) ./tanh(str_factor)))
+        # FIELD2(:) = L_z*(1.0_rprec+(tanh(str_factor*(z_uv(:)/L_z-1.0_rprec))    &
+        # /tanh(str_factor)))
+        jaco_z = domain[3] * (str_factor /domain[3]) .* (1 .- (tanh.(str_factor.*(z_stretch./domain[3] .- 1))).^2) ./ tanh.(str_factor)
+        # FIELD4(:) = L_z*(str_factor/L_z)*                                       &
+        # (1-(tanh(str_factor*(z_uv(:)/L_z-1.0_rprec)))**2)/tanh(str_factor)
 
-        coords = coordinates(x_coords, y_coords, z_stretch)
+        coords = coordinates(x_coords, y_coords, z_stretch, jaco_z)
         return coords
     else
-        coords = coordinates(x_coords, y_coords, z_coords)
+        jaco_z = z_coords .* 0 .+ 1
+        coords = coordinates(x_coords, y_coords, z_coords, jaco_z)
         return coords
     end
 
