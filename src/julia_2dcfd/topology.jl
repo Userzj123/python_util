@@ -54,7 +54,7 @@ function generate_coords(domain, dims; center=false, stretch=false, str_factor=1
         z_stretch = domain[3] .* (1 .+(tanh.(str_factor .*(z_coords ./domain[3] .-1)) ./tanh(str_factor)))
         # FIELD2(:) = L_z*(1.0_rprec+(tanh(str_factor*(z_uv(:)/L_z-1.0_rprec))    &
         # /tanh(str_factor)))
-        jaco_z = domain[3] * (str_factor /domain[3]) .* (1 .- (tanh.(str_factor.*(z_stretch./domain[3] .- 1))).^2) ./ tanh.(str_factor)
+        jaco_z = domain[3] * (str_factor /domain[3]) .* (1 .- (tanh.(str_factor.*(z_coords./domain[3] .- 1))).^2) ./ tanh.(str_factor)
         # FIELD4(:) = L_z*(str_factor/L_z)*                                       &
         # (1-(tanh(str_factor*(z_uv(:)/L_z-1.0_rprec)))**2)/tanh(str_factor)
 

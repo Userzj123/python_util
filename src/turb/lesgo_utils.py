@@ -259,10 +259,11 @@ class lesgo_data():
         return
     
     def write_inputs(self, ):
-        # Velocity Initial Conditions
-        write_array_to_file(self.inputs_dir + '/u_velocity.IC', self.data['u_ic'])
-        write_array_to_file(self.inputs_dir + '/v_velocity.IC', self.data['v_ic'])
-        write_array_to_file(self.inputs_dir + '/w_velocity.IC', self.data['w_ic'])
+        if not self.adjoint:
+            # Velocity Initial Conditions
+            write_array_to_file(self.inputs_dir + '/u_velocity.IC', self.data['u_ic'])
+            write_array_to_file(self.inputs_dir + '/v_velocity.IC', self.data['v_ic'])
+            write_array_to_file(self.inputs_dir + '/w_velocity.IC', self.data['w_ic'])
         
         # Scalar Initial Conditions
         self.ntheta = self.data['theta_IC'].shape[0]
@@ -438,7 +439,7 @@ class lesgo_data():
                 
         levels = np.linspace(kwargs['vmin'], kwargs['vmax'], kwargs['levels'])
 
-        fig, axes = plt.subplots(self.ntheta+1, 1, figsize=kwargs['figsize'], dpi = kwargs['dpi'])
+        fig, axes = plt.subplots(self.nsensors+1, 1, figsize=kwargs['figsize'], dpi = kwargs['dpi'])
         axes = axes.flatten()
 
         ct1 = axes[0].contourf(self.coords[0], self.coords[2], self.data['theta'][kwargs['nk'], :, kwargs['y_ind'], :].T, levels=kwargs['levels'],
@@ -489,7 +490,7 @@ class lesgo_data():
         self.sensor_init_(sensor_locs)
         self.obs_t = tt
         
-        mesh = meshgrid(domain=self.domain, dims = self.dims)
+        mesh = meshgrid(domain=self.domain, shape = self.dims)
         xi, yi, zi = mesh.cartesian2index(sensor_locs)
         
         if kwargs['gen_gif']:
@@ -518,6 +519,8 @@ class lesgo_data():
             
         if kwargs['gen_gif']:
             # build gif
+            if not os.path.exists(os.path.dirname(kwargs['gif_fname'])):
+                os.makedirs(os.path.dirname(kwargs['gif_fname']))
             with imageio.get_writer(kwargs['gif_fname'], mode='I') as writer:
                 for filename in filenames:
                     image = imageio.imread(filename)
@@ -783,9 +786,9 @@ class lesgo_data():
         kwargs = { **defaultKwargs, **kwargs }
         
         if kwargs['ic_type'] == 'gaussian':
-            self.gaussian_ic(**kwargs)
+            self.gaussian_field(**kwargs)
             
-    def gaussian_field(self, **kwargs):
+    def gaussian_inputs(self, **kwargs):
         """
         Generate a 3 dimensional numpy array with shape of [nx, ny, nz], which has a normal distribution with mean of mu_L=[x0, y0, z0] and variance of sigma. And the maximum value is set to be 1 in order to keep the magnitude same for differet IC.
         theta = e^(-((x-x0)^2 + (y-y0)^2 + (z-z0)^2)/(2*sigma^2))
@@ -806,7 +809,8 @@ class lesgo_data():
             'source_point'      : [1, 1, 0.5],
             'input_dir'         : self.inputs_dir,
             'fieldname'         : 'theta.IC',
-            'nk'                : 1,
+            'ext_fmt'           : self.fmt_kwargs['fmt_ntheta'],
+            'ext'               : 1,
             'readme_text'       : 'Domain =' + str(self.domain) + ', Dims = ' + str(self.dims) + ', nk = ' + str(kwargs['nk']) + ', Source at ' + str(kwargs['source_point'])
         }
         kwargs = { **defaultKwargs, **kwargs }
@@ -828,7 +832,7 @@ class lesgo_data():
         data = data/data.max()
         
         
-        fname = (kwargs['input_dir'] + '/%s.' + self.fmt_kwargs['fmt_ntheta']) %(kwargs['fieldname'], kwargs['nk'])
+        fname = (kwargs['input_dir'] + '/%s.' + kwargs['ext_fmt']) %(kwargs['fieldname'], kwargs['ext'])
         
         return write_array_to_file(fname, data, **kwargs)
     
@@ -865,7 +869,32 @@ class lesgo_data():
 
         
 if __name__ == "__main__":
-    lesgoconf_f = r'/home/zyou6474/Projects/lesgo_eri/src/lesgo.conf'
+    root_dir = '/home/zyou6474/tasks/source_inversion/forward'
+
+    dims = [128, 128, 64]
+    domain = [2*np.pi, np.pi, 1]
+    ntheta = 1
+
+    ldata = lesgo_data(domain, dims, root_dir, ntheta=ntheta)
+    ldata._fnames(fmt_ntheta='%.3i')
+
+    t_total = 500
+    tstep = 1
+    tt = np.arange(0, t_total+1, tstep)
+
+    sensor_locs = np.array([
+        [1.6 * np.pi, 1.6 * np.pi, 1.6 * np.pi,],
+        [0.5 * np.pi, 0.5 * np.pi, 0.5 * np.pi,],
+        [0.3, 0.5, 0.7]
+    ])
+
+    ldata.source_coords = sensor_locs
+
+    from pyutils.cartesian import coords_xyz, meshgrid
+    mesh = meshgrid(domain=ldata.domain, shape = ldata.dims)
+    xi, yi, zi = mesh.cartesian2index(sensor_locs)
+
+    ldata.sensor_measurements(sensor_locs, tt)
     
 
                 

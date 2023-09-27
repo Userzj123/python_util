@@ -50,6 +50,7 @@ def general_gif(tt, plt_func, pltfunc_args, **kwargs):
     filenames = []
     for it in tt:
         pltfunc_args['lesgo_data'].read_data(it)
+        pltfunc_args['lesgo_data'].current_tstep = it
         fig, ax = plt_func(**pltfunc_args)
         
         # create file name and append it to a list
