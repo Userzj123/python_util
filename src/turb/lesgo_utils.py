@@ -200,7 +200,8 @@ class lesgo_data():
     
     
     def read_data(self, t_ind):
-        self.read_velocity(t_ind)
+        if not self.adjoint:
+            self.read_velocity(t_ind)
         self.read_scalar(t_ind)
         
         return

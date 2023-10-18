@@ -1,11 +1,9 @@
-module scalar
+module scalar_solver
 
-include("../mesh.jl")
-include("../params.jl")
-using .mesh
-using .params
+include("../momentum/velocity.jl")
+using .velocity_solver
 
-export vars, velocity_vars, scalar_vars
+export scalar_vars
 
 
 struct scalar_vars
@@ -16,37 +14,11 @@ struct scalar_vars
     diffusion :: vartype
 end
 
-
-struct velocity_vars
-    u :: vartype
-    v :: vartype
-    w :: vartype
-end
-
-struct vars
-    velocity :: velocity_vars
-    scalar :: scalar_vars
-    conf :: configs 
-    grid :: meshgrid 
-end
-
-struct interp_veloctiy
-    u_iijk :: vartype
-    v_ijjk :: vartype
-    w_ijkk :: vartype
-end
-
-struct interp_scalar
+struct interp_scalar_vars
     theta_iijk :: vartype
     theta_ijjk :: vartype
     theta_ijkk :: vartype
 end
-
-struct interp_vars
-    velocity :: interp_veloctiy
-    scalar :: interp_scalar
-end
-
     function scalar_forward!(input::vars, )
 
         interp_result::interp_vars = interpolation(input)
@@ -61,7 +33,7 @@ end
     end
 
 
-    function get_adv(input::vars, interp_result::interp_vars)
+    function get_adv(input::vars, intp_scal::interp_scalar_vars, intp_vel::interp_veloctiy_vars)
         # Working On Sep 9
 
         advection = Array{Float64, 3}(undef, input.conf.domain["nx"], input.conf.domain["ny"], input.conf.domain["nz"])
@@ -69,12 +41,12 @@ end
             for j in Range(Ny)
                 for k in Range(Nz)
                     advection[i, j, k] = (
-                        interp_result.velocity.u_iijk[i+1, j, k]*input.grid.S.Sx[i, j, k]*interp_result.scalar.theta_iijk[i+1, j, k]    - 
-                        interp_result.velocity.u_iijk(ji, jj, jk)*input.grid.S.Sx(jk)*interp_result.scalar.theta_iijk(i, j, k)        + 
-                        interp_result.velocity.v_ijjk(ji, jj+1, jk)*input.grid.S.Sy(jk)*interp_result.scalar.theta_ijjk(ji, jj+1, jk)    - 
-                        interp_result.velocity.v_ijjk(ji, jj, jk)*input.grid.S.Sy(jk)*interp_result.scalar.theta_ijjk(ji, jj, jk)        + 
-                        interp_result.velocity.w_ijkk(ji, jj, jk+1)*input.grid.S.Sz(jk)*interp_result.scalar.theta_ijkk(ji, jj, jk+1)    - 
-                        interp_result.velocity.w_ijkk(ji, jj, jk)*input.grid.S.Sz(jk)*interp_result.scalar.theta_ijkk(ji, jj, jk)
+                        intp_vel.u_iijk[i+1, j, k]*input.grid.S.Sx[i, j, k]*intp_scal.theta_iijk[i+1, j, k]    - 
+                        intp_vel.u_iijk(ji, jj, jk)*input.grid.S.Sx(jk)*intp_scal.theta_iijk(i, j, k)        + 
+                        intp_vel.v_ijjk(ji, jj+1, jk)*input.grid.S.Sy(jk)*intp_scal.theta_ijjk(ji, jj+1, jk)    - 
+                        intp_vel.v_ijjk(ji, jj, jk)*input.grid.S.Sy(jk)*intp_scal.theta_ijjk(ji, jj, jk)        + 
+                        intp_vel.w_ijkk(ji, jj, jk+1)*input.grid.S.Sz(jk)*intp_scal.theta_ijkk(ji, jj, jk+1)    - 
+                        intp_vel.w_ijkk(ji, jj, jk)*input.grid.S.Sz(jk)*intp_scal.theta_ijkk(ji, jj, jk)
                     )/input.grid.V(jk)
                 end 
             end

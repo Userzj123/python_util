@@ -9,3 +9,4 @@ dist/
 src/python_utils.egg-info/
 
 test/imgs/*.gif
+*.vtr

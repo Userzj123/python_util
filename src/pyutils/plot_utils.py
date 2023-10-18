@@ -120,7 +120,8 @@ def contour_channel(coords, data, **kwargs):
         'levels': 101,
         'clip'  : False,
         'norm'  : colors.Normalize(data.min(), data.max()),
-        'cbar_label' : 'theta'
+        'cbar_label' : 'theta',
+        'cross_indices' : None
     }
     
     
@@ -130,7 +131,11 @@ def contour_channel(coords, data, **kwargs):
     x_coords, y_coords, z_coords = coords
     domain = tuple([d.max() for d in coords])
     dims = tuple([d.shape[0] for d in coords])
-    x_ind, y_ind, z_ind = np.unravel_index(data.argmax(), dims)
+    if kwargs["cross_indices"] is None:
+        x_ind, y_ind, z_ind = np.unravel_index(data.argmax(), dims)
+    else:
+        x_ind, y_ind, z_ind = kwargs["cross_indices"]
+    print("maximum index = [%i, %i, %i]" %(x_ind, y_ind, z_ind))
 
     fig = plt.figure(layout="constrained", figsize=(8,4))
 
