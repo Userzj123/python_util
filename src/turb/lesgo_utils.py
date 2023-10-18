@@ -232,18 +232,11 @@ class lesgo_data():
         self.data['theta'] = thetas
         return thetas
     
-    def read_inputs(self, dir):
+    def read_inputs(self, dir, in_dims = None):
         """
         Read the data of inputs field.
         """
-        if not self.adjoint :
-            u_icf = dir + '/u_velocity.IC'
-            v_icf = dir + '/v_velocity.IC'
-            w_icf = dir + '/w_velocity.IC'
-            
-            self.data['u_ic'] = read_array_from_file(u_icf, self.dims)
-            self.data['v_ic'] = read_array_from_file(v_icf, self.dims)
-            self.data['w_ic'] = read_array_from_file(w_icf, self.dims)
+        self.read_velocity_inputs(dir, in_dims = in_dims)
         
         source_fs = [os.path.join(dir, filename) for filename in os.listdir(dir) if filename.startswith("source.")]
         theta_IC_fs = [os.path.join(dir, filename) for filename in os.listdir(dir) if filename.startswith("theta.")]
@@ -258,6 +251,40 @@ class lesgo_data():
             self.data['theta_IC'] = np.concatenate((self.data['theta_IC'], read_array_from_file(fn, self.dims)[np.newaxis, :, :, :]))
         
         return
+    
+    def read_velocity_inputs(self, dir, in_dims = None):
+        from scipy.interpolate import interpn
+        """_summary_
+
+        Args:
+            dir (_type_): folder that store the initial condition.
+            in_dims (_type_, optional): Dimension of read in initial condition. Defaults to None.
+        """
+
+        
+        u_icf = dir + '/u_velocity.IC'
+        v_icf = dir + '/v_velocity.IC'
+        w_icf = dir + '/w_velocity.IC'
+
+
+        if in_dims == None:
+            self.data['u_ic'] = read_array_from_file(u_icf, self.dims)
+            self.data['v_ic'] = read_array_from_file(v_icf, self.dims)
+            self.data['w_ic'] = read_array_from_file(w_icf, self.dims)
+        else:
+            u_ic = read_array_from_file(u_icf, in_dims)
+            v_ic = read_array_from_file(v_icf, in_dims)
+            w_ic = read_array_from_file(w_icf, in_dims)
+            
+            in_coords = coords_xyz(self.domain, in_dims, center=False, stretch=True)
+            points = np.array([np.meshgrid(*self.coords, indexing="ij")[ind].reshape(-1) for ind in range(3)])
+            
+            self.data['u_ic'] = interpn(in_coords, u_ic, points.T).reshape(*self.dims)
+            self.data['v_ic'] = interpn(in_coords, v_ic, points.T).reshape(*self.dims)
+            self.data['w_ic'] = interpn(in_coords, w_ic, points.T).reshape(*self.dims)
+        
+        return 1
+            
     
     def write_inputs(self, ):
         if not self.adjoint:
