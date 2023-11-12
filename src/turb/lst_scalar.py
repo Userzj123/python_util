@@ -36,8 +36,8 @@ class lst_scalar():
         A, B = self.Operator(kx,kz,R,Pr,Ri,U,Up,Upp,Tp,self.D0, self.D1, self.D2, self.D4)
         
         # find eigenvalues
-        # omega, q = linalg.eig(A, B)
-        omega, q = np.linalg.eig(np.linalg.inv(B)@A)
+        omega, q = linalg.eig(A, B)
+        # omega, q = np.linalg.eig(np.linalg.inv(B)@A)
 
 
         omega = 1j*omega   # eigenvalues omega in vector form

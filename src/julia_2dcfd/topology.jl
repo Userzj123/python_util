@@ -80,4 +80,22 @@ function generate_meshgrid(coord::coordinates)::meshgrid
     return meshgrid(xx, yy, zz)
 end
 
+function get_volume(coord::coordinates)::Array{Float64, 3}
+    Nx = length(coord.x)
+    Ny = length(coord.y)
+    Nz = length(coord.z)
+
+
+    volume = Array{Float64, 3}(undef, Nx-1, Ny-1, Nz-1)
+    for i in range(1, Nx-1)
+        for j in range(1, Ny-1)
+            for k in range(1, Nz-1)
+                volume[i, j, k] = (coord.x[i+1] - coord.x[i]) * (coord.y[j+1] - coord.y[j]) * (coord.z[k+1] - coord.z[k])
+            end
+        end
+    end
+
+    return volume
+end
+
 end

@@ -187,6 +187,17 @@ class lesgo_data():
         self.kw_dims = dims*1
         self.kw_dims[2] += 1
         
+        iijjkk_dims = dims*1
+        iijjkk_dims = [i+1 for i in iijjkk_dims]
+
+        coords = coords_xyz(domain, iijjkk_dims, center=False, stretch=True)
+        
+        self.volume = np.zeros(shape=dims)
+        for i in range(dims[0]):
+            for j in range(dims[1]):
+                for k in range(dims[2]):
+                    self.volume[i, j, k] = (coords[0][i+1] - coords[0][i]) * (coords[1][j+1] - coords[1][j]) * (coords[2][k+1] - coords[2][k])
+        
         self.ihalf_coords = coords_xyz(domain, self.ihalf_dims, center=False, stretch=True)
         self.jhalf_coords = coords_xyz(domain, self.jhalf_dims, center=False, stretch=True)
         self.kw_coords = coords_xyz(domain, self.kw_dims, center=False, stretch=True)
@@ -325,7 +336,7 @@ class lesgo_data():
     def _fnames(self, **fmt_kwargs):
         defaultKwargs = {
             'fmt_tstep'   : r'%.8i',
-            'fmt_ntheta'   : r'%.2i'
+            'fmt_ntheta'   : r'%.3i'
         }
         self.fmt_kwargs = { **defaultKwargs, **fmt_kwargs }
         

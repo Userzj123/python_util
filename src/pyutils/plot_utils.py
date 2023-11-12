@@ -194,6 +194,80 @@ def contour_channel(coords, data, **kwargs):
     return fig, axes
 
 
+def channel_two_plane(coords, data, **kwargs):
+    import matplotlib.ticker as tick
+    
+    defaultKwargs = {
+        'cmap'                  : cm.twilight_shifted,
+        'figsize'               : (8, 6),
+        'levels'                : 101,
+        'norm'                  : colors.Normalize(data.min(), data.max()),
+        'cbar_label'            : r'Adjoint Mean $\overline{c^\dag}$',
+        'dpi'                   : 150,
+        'cbar_ticks'            : None,
+        'yind'                  : None,
+        'zind'                  : None,
+    }
+
+
+    kwargs = { **defaultKwargs, **kwargs}
+
+    index = np.unravel_index(data.argmax(), data.shape)
+    print(index)
+    if kwargs['yind'] == None: 
+        yind = index[1]
+    else:
+        yind = kwargs['yind']
+        
+    if kwargs['zind'] == None: 
+        zind = index[2]
+    else:
+        zind = kwargs['zind']
+
+    [x, y, z] = coords
+
+    fig, axes = plt.subplots(4, figsize=kwargs['figsize'], dpi=kwargs['dpi'])
+
+    gs = axes[1].get_gridspec()
+    # remove the underlying axes
+    for ax in axes[1:]:
+        ax.remove()
+    axbig = fig.add_subplot(gs[1:])
+
+    print("x-z plane on y = %.4f" % y[yind])
+    axes[0].contourf(x, z, data[:, yind, :].T, norm=kwargs['norm'], cmap=kwargs['cmap'], levels = kwargs['levels'])
+    axes[0].set_aspect('equal', 'box')
+    axes[0].set_ylim(0, 1)
+    axes[0].set_xlim(0, 2*np.pi)
+    axes[0].set_xticks([0,  np.pi, 2*np.pi], ["$0$", "$\pi$", "$2\pi$"])
+    axes[0].set_ylabel("$z$")
+
+    print("x-y plane on z = %.4f" % z[zind])
+    axbig.contourf(x, y, data[:, :, zind].T, norm=kwargs['norm'], cmap=kwargs['cmap'], levels = kwargs['levels'])
+    axbig.set_aspect('equal', 'box')
+    axbig.set_ylim(0, np.pi)
+    axbig.set_yticks([0, np.pi/2, np.pi], ["$0$", "$\pi/2$", "$\pi$"])
+    axbig.set_xlim(0, 2*np.pi)
+    axbig.set_xticks([0,  np.pi, 2*np.pi], ["$0$", "$\pi$", "$2\pi$"])
+    axbig.set_xlabel("$x$")
+    axbig.set_ylabel("$y$")
+
+    fig.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
+    cax = plt.axes([0.88, 0.11, 0.025, 0.78])
+    cbar = fig.colorbar(
+            cm.ScalarMappable(norm=kwargs['norm'], cmap=kwargs['cmap']),
+            cax = cax,)
+    if kwargs['cbar_ticks'] != None:
+        cbar.set_ticks(kwargs['cbar_ticks'])
+    cbar.formatter.set_powerlimits((0, 0))
+
+    # to get 10^3 instead of 1e3
+    cbar.formatter.set_useMathText(True)
+    cbar.set_label(kwargs['cbar_label'])
+
+    return fig, [axes[0], axbig, cax]
+
+
 class plot_format():
     def __init__(self,):
         return
