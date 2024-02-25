@@ -202,7 +202,7 @@ def channel_two_plane(coords, data, **kwargs):
         'figsize'               : (8, 6),
         'levels'                : 101,
         'norm'                  : colors.Normalize(data.min(), data.max()),
-        'cbar_label'            : r'Adjoint Mean $\overline{c^\dag}$',
+        'cbar_label'            : None,
         'dpi'                   : 150,
         'cbar_ticks'            : None,
         'yind'                  : None,

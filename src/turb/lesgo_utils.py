@@ -249,6 +249,12 @@ class lesgo_data():
         """
         self.read_velocity_inputs(dir, in_dims = in_dims)
         
+        self.read_scalar_inputs(dir, )
+        
+
+        return
+
+    def read_scalar_inputs(self, dir):
         source_fs = [os.path.join(dir, filename) for filename in os.listdir(dir) if filename.startswith("source.")]
         theta_IC_fs = [os.path.join(dir, filename) for filename in os.listdir(dir) if filename.startswith("theta.")]
 
@@ -260,10 +266,9 @@ class lesgo_data():
         self.data['theta_IC'] = np.empty((0, self.dims[0], self.dims[1], self.dims[2]))
         for find, fn in enumerate(theta_IC_fs):
             self.data['theta_IC'] = np.concatenate((self.data['theta_IC'], read_array_from_file(fn, self.dims)[np.newaxis, :, :, :]))
-        
         return
     
-    def read_velocity_inputs(self, dir, in_dims = None):
+    def read_velocity_inputs(self, dir, in_dims = None, in_domain=None):
         from scipy.interpolate import interpn
         """_summary_
 
@@ -287,7 +292,7 @@ class lesgo_data():
             v_ic = read_array_from_file(v_icf, in_dims)
             w_ic = read_array_from_file(w_icf, in_dims)
             
-            in_coords = coords_xyz(self.domain, in_dims, center=False, stretch=True)
+            in_coords = coords_xyz(in_domain, in_dims, center=False, stretch=True)
             points = np.array([np.meshgrid(*self.coords, indexing="ij")[ind].reshape(-1) for ind in range(3)])
             
             self.data['u_ic'] = interpn(in_coords, u_ic, points.T).reshape(*self.dims)
