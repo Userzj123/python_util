@@ -1,13 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pyutils.plot_utils as pltutils
-from pyutils.cartesian import coords_xyz, meshgrid
+from pyutils.cartesian import coords_xyz, meshgrid, jaco
 import os
 from configparser import ConfigParser
 
 from datetime import datetime
 date_marker = datetime.today().strftime('%Y_%m_%d')
 
+def read_periodic(f_half):
+    half_dims = f_half.shape
+    dims = (half_dims[0], half_dims[1], half_dims[2]*2)
+
+    f = np.zeros(shape=dims)
+    for i in range(half_dims[2]):
+        f[:, :, i] = f_half[:, :, i]
+        f[:, :, -i-1] = f_half[:, :, i]
+
+    return f
 
 def write_array_to_file(filename, array, gen_fig=False, **kwargs):
     """
@@ -52,14 +62,35 @@ def read_array_from_file(filename, shape, dtype=np.float64):
     Returns:
         array    : Numpy array with shape [nx, ny, nz] read from binary file.
     """
-    with open(filename, "rb") as f:
-        array_column_major = np.fromfile(f, dtype=dtype)
 
-    # Reshape the array into its original shape
-    array = np.reshape(array_column_major, shape[::-1], order='C').T
-    # array = np.reshape(array, shape[::-1], order='C')
+    with open(filename, "rb") as f:
+        array = np.fromfile(f, dtype=dtype)
+
+    array = array.reshape(shape, order='F')
+
 
     return array
+
+def add_dirac_source(shape, ind_xset, ind_yset, ind_zset, volume, ratio=10):
+    field = np.zeros(shape)
+    nfield = len(ind_xset)
+    for ind_field in range(nfield):
+        # ldata.data['thetas_IC'][ind_source] = zz * 0
+        sum_volume = 0
+        for i in range(-2, 3):
+            for j in range(-2, 3):
+                for k in range(-2, 3):
+                    location_ind = sorted([abs(i), abs(j), abs(k)])
+                    if location_ind == [0, 0, 0]:
+                        weight = 1
+                    else:
+                        weight = 0
+
+
+                    field[ind_field, ind_xset[ind_field]+i, ind_yset[ind_field]+j,  ind_zset[ind_field]+k] = weight/volume[ind_xset[ind_field]+i, ind_yset[ind_field]+j,  ind_zset[ind_field]+k]
+                    sum_volume += weight
+        field /= sum_volume
+    return field
 
 def read_lesgoconf(lesgoconf_fname):        
     with open(lesgoconf_fname, 'r') as f:
@@ -109,7 +140,28 @@ def read_lesgoconf(lesgoconf_fname):
     
     return configs
 
-def write_lesgoconf(fname, config: ConfigParser):
+def write_lesgoconf(root_dir, config: ConfigParser):
+
+
+    for module in ['SCALAR_ADJOINT', 'SCALAR'] :
+        if config.has_section(module):
+            if module == 'SCALAR':
+                fname  = root_dir + "/lesgo-scalar.conf"
+            elif module == "SCALAR_ADJOINT":
+                fname  = root_dir + "/lesgo-scalar-adjoint.conf"
+
+            with open(fname, 'w') as f:
+                for sec in [module, module+"_LOG"]:
+                    f.write(sec + '{ \n')
+                    for var in config[sec]:
+                        f.write(var + ' = ' + config[sec][var] + '\n')
+                        
+                    f.write('} \n\n')
+
+                    config.remove_section(sec)
+            print('Write configs in %s' % fname)            
+
+    fname  = root_dir + "/lesgo.conf"
     with open(fname, 'w') as f:
         for sec in config.sections():
             f.write(sec + '{ \n')
@@ -158,20 +210,19 @@ class lesgo_data():
     
     """
     
-    def __init__(self, domain, dims, forward_dir, ntheta=1) -> None:
-        self.forward_dir = forward_dir
-        if not os.path.exists(forward_dir):
-            os.makedirs(forward_dir)
-            print('create root folder in %s' % forward_dir)
-        self.forward_inputs_dir = forward_dir + '/inputs'
-        self.inputs_dir = self.forward_inputs_dir
+    def __init__(self, domain, dims, root_dir, ntheta=1) -> None:
+        self.root_dir = root_dir
+        if not os.path.exists(root_dir):
+            os.makedirs(root_dir)
+            print('create root folder in %s' % root_dir)
+        self.inputs_dir = root_dir + '/inputs'
         if not os.path.exists(self.inputs_dir):
             os.makedirs(self.inputs_dir)
             print('create inputs folder in %s' % self.inputs_dir)
             
-        
-        self.forward_output_dir = forward_dir + '/output'
-        self.output_dir = self.forward_output_dir
+
+
+        self.output_dir = root_dir + '/output'
         
         self.coords = coords_xyz(domain, dims, center=True, stretch=True)
         self.domain = domain
@@ -193,20 +244,26 @@ class lesgo_data():
         coords = coords_xyz(domain, iijjkk_dims, center=False, stretch=True)
         
         self.volume = np.zeros(shape=dims)
+        z = np.linspace(0, domain[2], dims[2]+1)
+        z = (z[1:] + z[:-1])/2
+        dz_uv = jaco(domain[2], z) * (z[1] - z[0])
         for i in range(dims[0]):
             for j in range(dims[1]):
                 for k in range(dims[2]):
-                    self.volume[i, j, k] = (coords[0][i+1] - coords[0][i]) * (coords[1][j+1] - coords[1][j]) * (coords[2][k+1] - coords[2][k])
+                    self.volume[i, j, k] = (coords[0][i+1] - coords[0][i]) * (coords[1][j+1] - coords[1][j]) * dz_uv[k]
+        
+
+        # for i in range(dims[0]):
+        #     for j in range(dims[1]):
+        #         for k in range(dims[2]):
+        #             self.volume[i, j, k] = (coords[0][i+1] - coords[0][i]) * (coords[1][j+1] - coords[1][j]) * (coords[2][k+1] - coords[2][k])
         
         self.ihalf_coords = coords_xyz(domain, self.ihalf_dims, center=False, stretch=True)
         self.jhalf_coords = coords_xyz(domain, self.jhalf_dims, center=False, stretch=True)
         self.kw_coords = coords_xyz(domain, self.kw_dims, center=False, stretch=True)
         
-        # initialize dataset file names
-        self.set_adjoint(adjoint=False)
-        
-        self.source_coords = np.empty(shape=(0, 3))
-        
+        self._fnames()
+        return
     # Post-processing
     
     
@@ -227,27 +284,24 @@ class lesgo_data():
         self.data['w'] = w
         
         return u, v, w
-
-    def _read_multi_scalar(self, data_f, t_ind, dims):
-        data = read_array_from_file(data_f % (1, t_ind), dims)[np.newaxis, :, :, :]
-        for k in range(1, self.ntheta):
-            data = np.concatenate((data, read_array_from_file(data_f % (k+1, t_ind), dims)[np.newaxis, :, :, :]))
-        return data
     
-    def read_scalar(self, t_ind, threshold=None):
-        thetas = self._read_multi_scalar(self.theta_f, t_ind, self.dims)
-        
-        if threshold != None:
-            thetas[thetas<threshold] = 0
+    def read_scalar(self, t_ind):
+        thetas = read_array_from_file(self.theta_f % t_ind, self.source_dims)
         
         self.data['theta'] = thetas
         return thetas
+
+    def read_scalar_adjoint(self, t_ind):
+        theta_Ds = read_array_from_file(self.adjoint_f % t_ind, self.sensor_dims)
+        
+        self.data['theta_D'] = theta_Ds
+        return
     
     def read_inputs(self, dir, in_dims = None):
         """
         Read the data of inputs field.
         """
-        self.read_velocity_inputs(dir, in_dims = in_dims)
+        self.read_velocity_inputs(dir, in_dims = in_dims, in_domain=self.domain)
         
         self.read_scalar_inputs(dir, )
         
@@ -268,7 +322,10 @@ class lesgo_data():
             self.data['theta_IC'] = np.concatenate((self.data['theta_IC'], read_array_from_file(fn, self.dims)[np.newaxis, :, :, :]))
         return
     
-    def read_velocity_inputs(self, dir, in_dims = None, in_domain=None):
+
+
+
+    def read_velocity_inputs(self, dir, in_dims = None, in_domain=None, periodic=False):
         from scipy.interpolate import interpn
         """_summary_
 
@@ -282,48 +339,76 @@ class lesgo_data():
         v_icf = dir + '/v_velocity.IC'
         w_icf = dir + '/w_velocity.IC'
 
+        if periodic:
+            half_dims = self.dims * 1
+            half_dims[2] = int(self.dims[2]/2)
 
-        if in_dims == None:
-            self.data['u_ic'] = read_array_from_file(u_icf, self.dims)
-            self.data['v_ic'] = read_array_from_file(v_icf, self.dims)
-            self.data['w_ic'] = read_array_from_file(w_icf, self.dims)
+
+            u_ic_half = read_array_from_file(u_icf, half_dims)
+            v_ic_half = read_array_from_file(v_icf, half_dims)
+            w_ic_half = read_array_from_file(w_icf, half_dims)
+
+            self.data['u_ic'] = read_periodic(u_ic_half)
+            self.data['v_ic'] = read_periodic(v_ic_half)
+            self.data['w_ic'] = read_periodic(w_ic_half)
         else:
-            u_ic = read_array_from_file(u_icf, in_dims)
-            v_ic = read_array_from_file(v_icf, in_dims)
-            w_ic = read_array_from_file(w_icf, in_dims)
+
+            if in_dims == None:
+                self.data['u_ic'] = read_array_from_file(u_icf, self.dims)
+                self.data['v_ic'] = read_array_from_file(v_icf, self.dims)
+                self.data['w_ic'] = read_array_from_file(w_icf, self.dims)
+            else:
+                u_ic = read_array_from_file(u_icf, in_dims)
+                v_ic = read_array_from_file(v_icf, in_dims)
+                w_ic = read_array_from_file(w_icf, in_dims)
+                
+                in_coords = coords_xyz(in_domain, in_dims, center=False, stretch=True)
+                points = np.array([np.meshgrid(*self.coords, indexing="ij")[ind].reshape(-1) for ind in range(3)])
+                
+                self.data['u_ic'] = interpn(in_coords, u_ic, points.T).reshape(*self.dims)
+                self.data['v_ic'] = interpn(in_coords, v_ic, points.T).reshape(*self.dims)
+                self.data['w_ic'] = interpn(in_coords, w_ic, points.T).reshape(*self.dims)
             
-            in_coords = coords_xyz(in_domain, in_dims, center=False, stretch=True)
-            points = np.array([np.meshgrid(*self.coords, indexing="ij")[ind].reshape(-1) for ind in range(3)])
-            
-            self.data['u_ic'] = interpn(in_coords, u_ic, points.T).reshape(*self.dims)
-            self.data['v_ic'] = interpn(in_coords, v_ic, points.T).reshape(*self.dims)
-            self.data['w_ic'] = interpn(in_coords, w_ic, points.T).reshape(*self.dims)
-        
         return 1
             
     
-    def write_inputs(self, ):
-        if not self.adjoint:
-            # Velocity Initial Conditions
-            write_array_to_file(self.inputs_dir + '/u_velocity.IC', self.data['u_ic'])
-            write_array_to_file(self.inputs_dir + '/v_velocity.IC', self.data['v_ic'])
-            write_array_to_file(self.inputs_dir + '/w_velocity.IC', self.data['w_ic'])
+    def write_inputs(self):
+        # Velocity Initial Conditions
+        write_array_to_file(self.inputs_dir + '/u_velocity.IC', self.data['u_ic'])
+        write_array_to_file(self.inputs_dir + '/v_velocity.IC', self.data['v_ic'])
+        write_array_to_file(self.inputs_dir + '/w_velocity.IC', self.data['w_ic'])
         
         # Scalar Initial Conditions
-        self.ntheta = self.data['theta_IC'].shape[0]
-        self.config['SCALAR']['ntheta'] = (self.fmt_kwargs['fmt_ntheta']) % self.ntheta
-        thetaic_f = self.inputs_dir + '/theta.' + self.fmt_kwargs['fmt_ntheta'] + '.IC'
-        for nk in range(self.ntheta):
-            write_array_to_file(thetaic_f % (nk+1), self.data['theta_IC'][nk])
+        self.nsource = self.data['thetas_IC'].shape[0]
+        self.source_dims = self.dims*1
+        self.source_dims.insert(0, self.nsource)
+        self.source_dims = tuple(self.source_dims)
+        self.config['SCALAR']['ntheta'] = (self.fmt_kwargs['fmt_ntheta']) % self.nsource
+        thetaic_f = self.inputs_dir + '/thetas.IC'
+        write_array_to_file(thetaic_f, self.data['thetas_IC'])
             
         # Source
-        if self.config['SCALAR']['source_opt'] == '1':
-            if self.data['source'].shape[0] != self.ntheta:
+        if self.config['SCALAR']['opt_source'] == '.TRUE.':
+            if self.data['sources'].shape[0] != self.nsource:
                 raise Exception("Sources of all scalar need to be defined in self.data['source'] with shape of (nk, nx, ny, nz)")
             else:   
-                source_f = self.inputs_dir + '/source.' + self.fmt_kwargs['fmt_ntheta']
-                for nk in range(self.ntheta):
-                    write_array_to_file(source_f % (nk+1), self.data['source'][nk])
+                source_f = self.inputs_dir + '/sources'
+                write_array_to_file(source_f, self.data['sources'])
+
+        # Sensor
+        if self.config.has_section('SCALAR_ADJOINT'):
+            self.nsensor = self.data['theta_Ds_IC'].shape[0]
+            self.sensor_dims = self.dims*1
+            self.sensor_dims.insert(0, self.nsensor)
+            self.sensor_dims = tuple(self.sensor_dims)
+            self.config['SCALAR_ADJOINT']['nadjoint'] = (self.fmt_kwargs['fmt_ntheta']) % self.nsensor
+
+            sensor_f = self.inputs_dir + '/theta_Ds.IC'
+            write_array_to_file(sensor_f, self.data['theta_Ds_IC'])
+
+            if self.config['SCALAR_ADJOINT']['opt_source_d'] == '.TRUE.':
+                sensor_source_f = self.inputs_dir + '/source_Ds'
+                write_array_to_file(sensor_source_f, self.data['source_Ds'])
             
         # LESGO.CONF
         ## Update shape of domain 
@@ -334,7 +419,7 @@ class lesgo_data():
         self.config['DOMAIN']['ly'] = f'{self.domain[1]}'
         self.config['DOMAIN']['lz'] = f'{self.domain[2]}'
         ## Write lesgo.conf
-        write_lesgoconf(self.inputs_dir + '/lesgo.conf', self.config)
+        write_lesgoconf(self.inputs_dir, self.config)
         
         return 
 
@@ -346,151 +431,23 @@ class lesgo_data():
         self.fmt_kwargs = { **defaultKwargs, **fmt_kwargs }
         
 
-        self.u_f = self.output_dir + r'/velocity/u_velocity.' + self.fmt_kwargs['fmt_tstep']
-        self.v_f = self.output_dir + r'/velocity/v_velocity.' + self.fmt_kwargs['fmt_tstep']
-        self.w_f = self.output_dir + r'/velocity/w_velocity.' + self.fmt_kwargs['fmt_tstep']
+        self.u_f = self.output_dir + r'/ns/u_velocity.' + self.fmt_kwargs['fmt_tstep']
+        self.v_f = self.output_dir + r'/ns/v_velocity.' + self.fmt_kwargs['fmt_tstep']
+        self.w_f = self.output_dir + r'/ns/w_velocity.' + self.fmt_kwargs['fmt_tstep']
 
         
-        self.theta_f = self.output_dir + r'/scalar/theta.' + self.fmt_kwargs['fmt_ntheta'] + '.' + self.fmt_kwargs['fmt_tstep']
-    
-        if self.adjoint:
-            self.adjoint_f = self.adjoint_dir + r'/scalar/theta.' + self.fmt_kwargs['fmt_ntheta'] + '.' + self.fmt_kwargs['fmt_tstep']
+        self.theta_f = self.output_dir + r'/scalar/thetas.'+ self.fmt_kwargs['fmt_tstep']
+        self.adjoint_f = self.output_dir + r'/scalar_adjoint/theta_Ds.' + self.fmt_kwargs['fmt_tstep']
             
         return 
     
     
-    def set_adjoint(self, adjoint = False, adjoint_dir = None, **kwargs):
-        self.adjoint = adjoint
-        if adjoint:
-            self.adjoint_dir = adjoint_dir
-            self.adjoint_inputs_dir = self.adjoint_dir + '/inputs'
-            self.adjoint_output_dir = self.adjoint_dir + '/output'
-            
-            self.inputs_dir = self.adjoint_inputs_dir
-            self.output_dir = self.adjoint_output_dir
-            if not os.path.exists(adjoint_dir):
-                os.makedirs(adjoint_dir)
-                print('create adjoint root folder in %s' % adjoint_dir)
-            if not os.path.exists(self.adjoint_inputs_dir):
-                os.makedirs(self.adjoint_inputs_dir)
-                print('create adjoint inputs folder in %s' % self.adjoint_inputs_dir)
-        else:
-            self.inputs_dir = self.forward_inputs_dir
-            self.output_dir = self.forward_output_dir
-                
-        self._fnames(**kwargs)
-        return
     
-    # [Working on] maybe combine adjoint and forward init together as well as previous lesgo.conf
-    def __init_folder(self, **kwargs):
-        defaultKwargs = {
-            'adjoint_flag'  : False,
-            'dir'           : './'
-        }
-        kwargs = { **defaultKwargs, **kwargs }
-        
-        
-        return
 
-    def read_sensor_adjoint(self, t_ind):
-        self.data['adjoint'] = np.empty((self.nx, self.nsensors, self.dims[0], self.dims[1], self.dims[2]))
-        for nnx in range(self.nx):
-            for ns in range(self.nsensors):
-                self.data['adjoint'][nnx, ns, :, :, :] = read_array_from_file(self.adjoint_f % (ns+1, t_ind), self.dims)
 
-        return
     
-    def read_debug(self, t_ind):
-        self.test_dir = self.output_dir + '/test'
-        self.debug_advection_scalar(t_ind)
-        self.debug_diffusion_scalar(t_ind)
-        
-        return
 
-    def debug_advection_scalar(self, t_ind):
-        adv_f = self.test_dir + r'/advection.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        
-        dTdx_f = self.test_dir + r'/dTdx.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        dTdy_f = self.test_dir + r'/dTdy.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        dTdz_f = self.test_dir + r'/dTdz.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        
-        self.data['adv'] = self._read_multi_scalar(adv_f, t_ind, self.dims)
-
-        self.data['dTdx'] = self._read_multi_scalar(dTdx_f, t_ind, self.ihalf_dims)
-        self.data['dTdy'] = self._read_multi_scalar(dTdy_f, t_ind, self.jhalf_dims)
-        self.data['dTdz'] = self._read_multi_scalar(dTdz_f, t_ind, self.dims)
-
-        return
-
-    def debug_diffusion_scalar(self, t_ind):
-        diff_f = self.test_dir + r'/diffusion.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        
-        u_ihalf_f = self.test_dir + r'/u_ihalf.' + self.fmt_kwargs['fmt_tstep']
-        v_jhalf_f = self.test_dir + r'/v_jhalf.' + self.fmt_kwargs['fmt_tstep']
-        w_kw_f = self.test_dir + r'/w_kw.' + self.fmt_kwargs['fmt_tstep']
-        
-        theta_ihalf_f = self.test_dir + r'/theta_ihalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        theta_jhalf_f = self.test_dir + r'/theta_jhalf.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        theta_kw_f = self.test_dir + r'/theta_kw.' + self.fmt_kwargs['fmt_ntheta'] +'.' + self.fmt_kwargs['fmt_tstep']
-        
-        self.data["diff"] = self._read_multi_scalar(diff_f, t_ind, self.dims)
-        
-        self.data["u_ihalf"] = read_array_from_file(u_ihalf_f % (t_ind), self.ihalf_dims)
-        self.data["v_jhalf"] = read_array_from_file(v_jhalf_f % (t_ind), self.jhalf_dims)
-        self.data["w_kw"] = read_array_from_file(w_kw_f % (t_ind), self.dims)
-        
-        self.data["theta_ihalf"] = self._read_multi_scalar(theta_ihalf_f, t_ind, self.ihalf_dims)
-        self.data["theta_jhalf"] = self._read_multi_scalar(theta_jhalf_f, t_ind, self.jhalf_dims)
-        self.data["theta_kw"] = self._read_multi_scalar(theta_kw_f, t_ind, self.dims)
-        
-        return
     
-    
-    
-    # Pre-processing
-    
-    def install_lesgo(self, **repo_args):
-        defaultKwargs = {
-            'version'       : '6c4a959a5796127db5670f3357bc7608c67b2ba6',
-            'repo'          : 'git@github.com:Advanced-Data-Assimilation/lesgo_eri.git',
-            'dir'           : self.forward_dir + '/lesgo',
-            'ssh_key'       : '/home/zyou6474/.ssh/id_rsa'
-        }
-        repo_args = { **defaultKwargs, **repo_args }
-        self.repo_args = repo_args
-        self.lesgo_dir = self.forward_dir + '/lesgo'
-        
-        
-        import subprocess
-
-
-        cmd = "unset SSH_ASKPASS; git clone %s %s; cd %s; git checkout %s" % (repo_args['repo'], repo_args['dir'], repo_args['dir'], repo_args['version'])
-
-        returned_output = subprocess.check_output(cmd, shell=True)  # returns the exit code in unix
-        # using decode() function to convert byte string to string
-        print(returned_output.decode("utf-8"))
-        
-        cmd = "cd %s/src; ./build-lesgo" % (repo_args['dir'])
-
-        build_output = subprocess.check_output(cmd, shell=True)  # returns the exit code in unix
-        # using decode() function to convert byte string to string
-        print(build_output.decode("utf-8"))
-        
-        cmd = "cp %s/build/lesgo-mpi-scalars-DA %s/" % (repo_args['dir'], self.forward_dir)
-
-        returned_value = subprocess.run(cmd, shell=True)  # returns the exit code in unix
-        # using decode() function to convert byte string to string
-        print(returned_value)
-        
-        self.configs_dir = self.forward_dir + '/output/configs'
-        if not os.path.exists(self.configs_dir):
-            os.makedirs(self.configs_dir)
-            print('create root folder in %s' % self.configs_dir)
-            
-            
-        self._read_lesgoconf('%s/src/lesgo.conf' % repo_args['dir'])
-        self._write_conf('%s/config_%s.ini' %(self.configs_dir, date_marker))        
-        return
     
     def _read_lesgoconf(self, lesgoconf_f):
         lesgoconf = read_lesgoconf(lesgoconf_f)
@@ -546,8 +503,6 @@ if __name__ == "__main__":
         [0.5 * np.pi, 0.5 * np.pi, 0.5 * np.pi,],
         [0.3, 0.5, 0.7]
     ])
-
-    ldata.source_coords = sensor_locs
 
     from pyutils.cartesian import coords_xyz, meshgrid
     mesh = meshgrid(domain=ldata.domain, shape = ldata.dims)

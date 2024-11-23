@@ -146,6 +146,8 @@ def correlation(P, gpr, ax=plt.subplots(), fitting=False, func=radial_basis):
     return cov, err, popt
 
 
+
+
 def plot_energy_spectrum(P, dx, kdelta, ax, label='Real Pressure', color='r'):
     w, s = energy_spectrum(P, dx)
 

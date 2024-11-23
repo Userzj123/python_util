@@ -32,6 +32,8 @@ def coords_xyz(domain, dims, stretch=False, str_factor=1.5, center=False):
 
     return x_coords, y_coords, z_coords
 
+def jaco(L_z, z, str_factor=1.5):
+    return L_z*(str_factor/L_z)* (1-(np.tanh(str_factor*(z/L_z-1)))**2) / np.tanh(str_factor)
 
 class meshgrid():
     def __init__(self, domain, shape):

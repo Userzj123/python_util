@@ -4,7 +4,7 @@ from scipy import linalg
 
 
 class lst_scalar():
-    def __init__(self, N:int, bf:int) -> None:
+    def __init__(self, N:int, bf:int, Pr:float=0.71, R:int=180, kx:int=1, kz:int=0) -> None:
         """Initialize the LST Analysis
 
         Args:
@@ -17,11 +17,11 @@ class lst_scalar():
         # Input parameters 
         self.N       = N # number of Chebyshev polynomials
 
-        R  = 180         # Reynolds number
-        kx = 1           # streamwise wavenumber
-        kz = 0           # spanwise wavenumber
+        # R  = 180         # Reynolds number
+        # kx = 1           # streamwise wavenumber
+        # kz = 0           # spanwise wavenumber
         Ri = 0.0        # Richardson number
-        Pr = 0.71        # Prantl number
+        # Pr = 0.71        # Prantl number
         Ra = 8*R*R/Pr*Ri # Rayleigh number
         
         # Set up grid and differentiation matrices
