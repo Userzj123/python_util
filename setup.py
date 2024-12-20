@@ -9,7 +9,12 @@ setup(
     version="0.1.0",
     packages=["turb", 'pyutils'],
     package_dir = {'': 'src'},
-    py_modules = ['turb.channel_plot', 'pyutils.plot_utils', 'pyutils.data_utils', 'turb.lesgo_utils', 'turb.lst_scalar'],
+    py_modules = ['turb.channel_plot', 
+                  'pyutils.plot_utils', 
+                  'pyutils.data_utils', 
+                  'turb.lesgo_utils', 
+                  'turb.lst_scalar',
+                  'turb.statistic_utils'],
     # scripts=glob.glob('src/turb/*.py'),
     install_requires=[
         'Pillow>=9.5.0',
